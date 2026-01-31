@@ -1,131 +1,150 @@
 'use client'
 
 import { createBrowserClient } from '@supabase/ssr'
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export default function SettingsPage() {
   const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  
+  // Form State
+  const [fullName, setFullName] = useState('')
+  const [jobTitle, setJobTitle] = useState('')
+  const [website, setWebsite] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
+  const [user, setUser] = useState<any>(null)
+
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  
-  // Form Fields
-  const [fullName, setFullName] = useState('')
-  const [jobTitle, setJobTitle] = useState('')
-  const [linkedin, setLinkedin] = useState('')
-  const [userId, setUserId] = useState('')
-
-  // Load current data
   useEffect(() => {
-    async function loadProfile() {
+    const getProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return router.push('/login')
-      
-      setUserId(user.id)
+      setUser(user)
 
-      const { data, error } = await supabase
+      // Fetch existing profile data
+      const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()
 
-      if (data) {
-        setFullName(data.full_name || '')
-        setJobTitle(data.job_title || '')
-        setLinkedin(data.linkedin_url || '')
+      if (profile) {
+        setFullName(profile.full_name || '')
+        setJobTitle(profile.job_title || '')
+        setWebsite(profile.website || '')
+        setAvatarUrl(profile.avatar_url || '')
       }
       setLoading(false)
     }
-    loadProfile()
-  }, [supabase, router])
+    getProfile()
+  }, [])
 
-  async function handleSave(e: React.FormEvent) {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: fullName,
-        job_title: jobTitle,
-        linkedin_url: linkedin,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', userId)
+    const updates = {
+      id: user.id,
+      full_name: fullName,
+      job_title: jobTitle,
+      website,
+      avatar_url: avatarUrl,
+      updated_at: new Date().toISOString(),
+    }
 
+    const { error } = await supabase.from('profiles').upsert(updates)
+    
     if (error) {
-      alert('Error saving profile')
+      alert(error.message)
     } else {
-      alert('Profile updated!')
+      alert('Profile updated successfully!')
       router.refresh()
     }
     setSaving(false)
   }
 
-  if (loading) return <div className="p-10 text-center">Loading settings...</div>
+  if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-500">Loading settings...</div>
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Edit Profile</h1>
-        
-        <form onSubmit={handleSave} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Display Name</label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm text-black"
-              placeholder="e.g. John Doe"
-            />
-          </div>
+    <main className="min-h-screen bg-slate-950 pt-24 pb-20">
+      <div className="max-w-2xl mx-auto px-4">
+        <h1 className="text-3xl font-bold text-white mb-8">Profile Settings</h1>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Job Title / Major</label>
-            <input
-              type="text"
-              value={jobTitle}
-              onChange={(e) => setJobTitle(e.target.value)}
-              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm text-black"
-              placeholder="e.g. Electrical Engineer @ Tesla or PhD Student"
-            />
-          </div>
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl">
+          <form onSubmit={handleUpdate} className="space-y-6">
+            
+            {/* Avatar Input (Simple URL for now, or file upload logic similar to projects) */}
+            <div>
+              <label className="block text-sm font-bold text-slate-400 mb-2">Avatar URL</label>
+              <div className="flex gap-4 items-center">
+                <div className="h-12 w-12 rounded-full bg-slate-800 border border-slate-700 overflow-hidden flex-shrink-0">
+                  {avatarUrl ? <img src={avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-500">?</div>}
+                </div>
+                <input 
+                  type="url" 
+                  className="flex-1 p-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-600 outline-none"
+                  placeholder="https://github.com/yourname.png"
+                  value={avatarUrl}
+                  onChange={e => setAvatarUrl(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-slate-500 mt-2">Tip: Use your GitHub avatar link or any public image URL.</p>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">LinkedIn URL</label>
-            <input
-              type="url"
-              value={linkedin}
-              onChange={(e) => setLinkedin(e.target.value)}
-              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm text-black"
-              placeholder="https://linkedin.com/in/..."
-            />
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-400 mb-2">Full Name</label>
+                <input 
+                  type="text" 
+                  className="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-600 outline-none"
+                  placeholder="e.g. Alex Engineer"
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                />
+              </div>
 
-          <div className="flex justify-end gap-4">
-            <button
-              type="button"
-              onClick={() => router.push(`/profile/${userId}`)}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
-            >
-              View Public Profile
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
+              <div>
+                <label className="block text-sm font-bold text-slate-400 mb-2">Job Title</label>
+                <input 
+                  type="text" 
+                  className="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-600 outline-none"
+                  placeholder="e.g. Systems Architect"
+                  value={jobTitle}
+                  onChange={e => setJobTitle(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-slate-400 mb-2">Website / Portfolio</label>
+              <input 
+                type="url" 
+                className="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-600 outline-none"
+                placeholder="https://your-portfolio.com"
+                value={website}
+                onChange={e => setWebsite(e.target.value)}
+              />
+            </div>
+
+            <div className="pt-6 border-t border-slate-800 flex justify-end">
+              <button 
+                type="submit" 
+                disabled={saving}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg hover:shadow-blue-500/20 transition-all disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+
+          </form>
+        </div>
       </div>
-    </div>
+    </main>
   )
 }

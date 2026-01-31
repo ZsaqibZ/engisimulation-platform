@@ -1,10 +1,8 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
-// --- Same Master List (Copied for consistency) ---
-// Ideally, you would move this to a shared file like `app/utils/constants.ts` in the future
 const SOFTWARE_LIST = [
   "MATLAB/Simulink", "Python", "LabVIEW", "Mathematica", "Maple", "R Studio", "Octave", "Scilab", "Excel/VBA",
   "SolidWorks", "AutoCAD", "Fusion 360", "CATIA", "Autodesk Inventor", "Siemens NX", "Creo Parametric", "Rhino 3D", "SketchUp", "FreeCAD", "Blender", "Onshape", "Solid Edge",
@@ -19,46 +17,60 @@ const SOFTWARE_LIST = [
 export default function SearchFilter() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const pathname = usePathname() // <--- 1. Get current path (e.g., '/library')
   
   const [query, setQuery] = useState(searchParams.get('q') || '')
   const [type, setType] = useState(searchParams.get('type') || '')
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Prevents the filter from triggering immediately on load
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
-    const timer = setTimeout(() => handleSearch(query, type), 500)
-    return () => clearTimeout(timer)
-  }, [query, type])
+    if (!isMounted) return
 
-  function handleSearch(q: string, t: string) {
-    const params = new URLSearchParams(searchParams.toString())
-    if (q) params.set('q', q)
-    else params.delete('q')
-    if (t) params.set('type', t)
-    else params.delete('type')
-    router.replace(`/?${params.toString()}`)
-  }
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString())
+      
+      if (query) params.set('q', query)
+      else params.delete('q')
+      
+      if (type) params.set('type', type)
+      else params.delete('type')
+
+      // 2. Use 'pathname' instead of hardcoded '/'
+      // This ensures we stay on '/library' or '/browse' or wherever we are.
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+      
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [query, type, isMounted, pathname, router, searchParams])
 
   return (
     <div className="flex flex-col sm:flex-row gap-4">
-      {/* Text Search */}
+      {/* Search Input */}
       <div className="relative flex-1">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
         <input
           type="text"
-          className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm text-black"
-          placeholder="Search for simulations, code, or methods..."
+          className="block w-full pl-10 pr-3 py-2 border border-slate-700 rounded-lg leading-5 bg-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out sm:text-sm text-white"
+          placeholder="Search for simulations..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
 
-      {/* Expanded Dropdown */}
+      {/* Software Filter */}
       <div className="sm:w-64">
         <select
-          className="block w-full pl-3 pr-10 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm rounded-lg bg-white text-black"
+          className="block w-full pl-3 pr-10 py-2 text-base border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg bg-slate-900 text-white"
           value={type}
           onChange={(e) => setType(e.target.value)}
         >

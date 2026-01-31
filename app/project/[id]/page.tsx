@@ -21,30 +21,28 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     .eq('id', id)
     .single()
 
-  if (!project) return <div className="p-20 text-center">Project not found</div>
+  if (!project) return <div className="p-20 text-center text-white">Project not found</div>
 
-  // 2. Fetch User (for download & edit logic)
   const { data: { user } } = await supabase.auth.getUser()
   const isAuthor = user && user.id === project.author_id
 
-  // 3. Fetch REAL Like Count
+  // 2. Fetch Like Info
   const { count: likeCount } = await supabase
     .from('likes')
     .select('*', { count: 'exact', head: true })
     .eq('project_id', id)
-    let userHasLiked = false
-    if (user) {
-      const { data: likeData } = await supabase
-        .from('likes')
-        .select('id')
-        .eq('project_id', id)
-        .eq('user_id', user.id)
-        .single()
-      
-      if (likeData) userHasLiked = true
-    }
 
-  // Helper for YouTube Embed
+  let userHasLiked = false
+  if (user) {
+    const { data: likeData } = await supabase
+      .from('likes')
+      .select('id')
+      .eq('project_id', id)
+      .eq('user_id', user.id)
+      .single()
+    if (likeData) userHasLiked = true
+  }
+
   const getEmbedUrl = (url: string) => {
     if (!url) return null
     const v = url.split('v=')[1] || url.split('/').pop()
@@ -52,112 +50,85 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 pt-24 pb-20">
+    <main className="min-h-screen bg-slate-950 pt-24 pb-20">
       
-      {/* BACKGROUND DECORATION */}
-      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-gray-200 to-gray-50 z-0"></div>
+      {/* Background decoration */}
+      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-slate-900 to-slate-950 z-0"></div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* --- HEADER SECTION --- */}
         <div className="mb-8 animate-fade-in">
-          <Link href="/" className="text-gray-500 hover:text-blue-600 text-sm font-medium mb-4 inline-block transition-colors">
+          <Link href="/" className="text-slate-400 hover:text-blue-400 text-sm font-medium mb-4 inline-block transition-colors">
             ← Back to Library
           </Link>
           
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
             <div>
               <div className="flex flex-wrap items-center gap-3 mb-3">
-                 <span className="px-3 py-1 rounded-full bg-white border border-gray-200 text-xs font-bold uppercase tracking-wider text-gray-700 shadow-sm">
+                 <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold uppercase tracking-wider text-slate-300 shadow-sm">
                    {project.software_type}
                  </span>
-                 <span className="text-gray-400 text-sm font-mono-tech">
+                 <span className="text-slate-500 text-sm font-mono">
                    v1.0 • {new Date(project.created_at).toLocaleDateString()}
                  </span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-white leading-tight">
                 {project.title}
               </h1>
             </div>
             
             {/* ACTION BUTTONS */}
             <div className="flex flex-wrap items-center gap-3">
-               <LikeButton projectId={project.id} initialLikes={likeCount || 0} initialHasLiked={userHasLiked}/>
+               <LikeButton projectId={project.id} initialLikes={likeCount || 0} initialHasLiked={userHasLiked} />
                
-               {/* --- OWNER CONTROLS (Only visible to Author) --- */}
                {isAuthor && (
                  <>
                    <Link 
                      href={`/project/${project.id}/edit`}
-                     className="px-4 py-2 bg-white border border-gray-200 text-gray-600 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm flex items-center gap-2 shadow-sm"
+                     className="px-4 py-2 bg-slate-800 border border-slate-700 text-slate-300 font-medium rounded-lg hover:bg-slate-700 transition-colors text-sm flex items-center gap-2"
                    >
                      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                      Edit
                    </Link>
-                   
                    <DeleteProjectButton projectId={project.id} />
                  </>
                )}
-
-               {/* Share Button (Mock) */}
-               <button className="p-2 bg-white border border-gray-200 rounded-full text-gray-500 hover:text-blue-600 transition-colors shadow-sm">
-                 <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8m-4-6l-4-4-4 4m4-4v13"></path></svg>
-               </button>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* --- LEFT COLUMN: MAIN CONTENT (2/3 Width) --- */}
+          {/* --- LEFT COLUMN --- */}
           <div className="lg:col-span-2 space-y-8 animate-slide-up">
             
-            {/* 1. MEDIA PLAYER / GALLERY */}
-            <div className="bg-black rounded-xl overflow-hidden shadow-2xl ring-1 ring-gray-900/10">
+            {/* MEDIA */}
+            <div className="bg-black rounded-xl overflow-hidden shadow-2xl ring-1 ring-slate-800">
               {project.youtube_url ? (
                 <div className="aspect-video w-full">
-                  <iframe 
-                    src={getEmbedUrl(project.youtube_url)!} 
-                    className="w-full h-full" 
-                    allowFullScreen 
-                  />
+                  <iframe src={getEmbedUrl(project.youtube_url)!} className="w-full h-full" allowFullScreen />
                 </div>
               ) : project.screenshots && project.screenshots.length > 0 ? (
-                <img 
-                  src={project.screenshots[0]} 
-                  className="w-full h-auto object-cover" 
-                  alt="Main Preview" 
-                />
+                <img src={project.screenshots[0]} className="w-full h-auto object-cover" alt="Main Preview" />
               ) : (
-                <div className="h-64 flex items-center justify-center text-gray-500">
-                  No Preview Available
-                </div>
+                <div className="h-64 flex items-center justify-center text-slate-600">No Preview Available</div>
               )}
             </div>
 
-            {/* Thumbnail Strip */}
-            {project.screenshots && project.screenshots.length > 1 && (
-               <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                 {project.screenshots.map((shot: string, i: number) => (
-                   <img key={i} src={shot} className="h-20 w-32 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity" />
-                 ))}
-               </div>
-            )}
-
-            {/* 2. DESCRIPTION */}
-            <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 border-b border-gray-100 pb-2">About this Project</h2>
-              <div className="prose prose-blue max-w-none text-gray-600 leading-relaxed whitespace-pre-line">
+            {/* DESCRIPTION */}
+            <div className="bg-slate-900 rounded-xl p-8 border border-slate-800 shadow-sm">
+              <h2 className="text-xl font-bold text-white mb-4 border-b border-slate-800 pb-2">About this Project</h2>
+              <div className="prose prose-invert max-w-none text-slate-300 leading-relaxed whitespace-pre-line">
                 {project.description}
               </div>
               
-              {/* Tags */}
               {project.tags && project.tags.length > 0 && (
-                <div className="mt-8 pt-6 border-t border-gray-50">
-                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Keywords</h3>
+                <div className="mt-8 pt-6 border-t border-slate-800">
+                  <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Keywords</h3>
                   <div className="flex flex-wrap gap-2">
                     {project.tags.map((tag: string) => (
-                      <span key={tag} className="px-3 py-1 bg-gray-50 text-gray-600 rounded-md text-sm border border-gray-200">
+                      <span key={tag} className="px-3 py-1 bg-slate-800 text-slate-300 rounded-md text-sm border border-slate-700">
                         #{tag}
                       </span>
                     ))}
@@ -166,74 +137,62 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               )}
             </div>
 
-            {/* 3. COMMENTS */}
-            <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm">
-               <h2 className="text-xl font-bold text-gray-900 mb-6">Discussion</h2>
+            {/* COMMENTS */}
+            <div className="bg-slate-900 rounded-xl p-8 border border-slate-800 shadow-sm">
+               <h2 className="text-xl font-bold text-white mb-6">Discussion</h2>
                <CommentSection projectId={project.id} />
             </div>
           </div>
 
-          {/* --- RIGHT COLUMN: SIDEBAR (1/3 Width) --- */}
+          {/* --- RIGHT COLUMN (SIDEBAR) --- */}
           <div className="space-y-6">
             
-            {/* 1. DOWNLOAD CARD (Sticky only on Large Screens) */}
-            {/* Change: 'sticky top-24' -> 'lg:sticky lg:top-24' */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-lg lg:sticky lg:top-24">
+            {/* DOWNLOAD CARD */}
+            <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg lg:sticky lg:top-24">
               <div className="mb-6">
-                 <h3 className="text-lg font-bold text-gray-900">Get the Files</h3>
-                 <p className="text-sm text-gray-500">Includes source code and documentation.</p>
+                 <h3 className="text-lg font-bold text-white">Get the Files</h3>
+                 <p className="text-sm text-slate-400">Includes source code and documentation.</p>
               </div>
 
               {user ? (
                 <a 
                   href={project.file_url} 
                   download 
-                  className="block w-full text-center py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all"
+                  className="block w-full text-center py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1 transition-all"
                 >
                   Download File
                 </a>
               ) : (
                 <Link 
                   href="/login" 
-                  className="block w-full text-center py-4 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-lg transition-all"
+                  className="block w-full text-center py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg transition-all border border-slate-700"
                 >
                   Log In to Download
                 </Link>
               )}
 
-              <div className="mt-6 space-y-3 pt-6 border-t border-gray-100 text-sm text-gray-600">
-                 <div className="flex justify-between">
-                   <span>License</span>
-                   <span className="font-mono-tech text-gray-900">MIT Open Source</span>
-                 </div>
-                 <div className="flex justify-between">
-                   <span>File Size</span>
-                   <span className="font-mono-tech text-gray-900">~2.4 MB</span>
-                 </div>
-                 <div className="flex justify-between">
-                   <span>Verified</span>
-                   <span className="text-green-600 font-bold">Yes ✅</span>
-                 </div>
+              <div className="mt-6 space-y-3 pt-6 border-t border-slate-800 text-sm text-slate-400">
+                 <div className="flex justify-between"><span>License</span><span className="font-mono text-white">MIT Open Source</span></div>
+                 <div className="flex justify-between"><span>Verified</span><span className="text-green-400 font-bold">Yes ✅</span></div>
               </div>
             </div>
 
-            {/* 2. AUTHOR CARD */}
-            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Published By</h3>
+            {/* AUTHOR CARD */}
+            <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-sm">
+               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Published By</h3>
                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
+                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-md border border-slate-700">
                      {project.profiles?.full_name?.charAt(0) || 'U'}
                   </div>
                   <div>
-                    <div className="font-bold text-gray-900">{project.profiles?.full_name || 'Anonymous Engineer'}</div>
-                    <div className="text-xs text-gray-500">{project.profiles?.job_title || 'Community Member'}</div>
+                    <div className="font-bold text-white">{project.profiles?.full_name || 'Anonymous Engineer'}</div>
+                    <div className="text-xs text-slate-400">{project.profiles?.job_title || 'Community Member'}</div>
                   </div>
                </div>
-               <Link href={`/profile/${project.author_id}`} className="block mt-4 text-center text-sm text-blue-600 font-medium hover:underline">
+               <Link href={`/profile/${project.author_id}`} className="block mt-4 text-center text-sm text-blue-400 font-medium hover:text-blue-300">
                  View Portfolio
                </Link>
             </div>
-
           </div>
         </div>
       </div>
