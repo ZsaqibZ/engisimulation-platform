@@ -4,6 +4,7 @@ import Link from 'next/link'
 import LikeButton from '@/app/components/LikeButton'
 import CommentSection from '@/app/components/CommentSection'
 import DeleteProjectButton from '@/app/components/DeleteProjectButton'
+import ProjectGallery from '@/app/components/ProjectGallery' // Integrated the new gallery
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -66,25 +67,21 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             </header>
 
             {/* CINEMA MODE MEDIA GALLERY */}
-            {(project.youtube_url || project.screenshots?.[0]) && (
-              <div className="bg-slate-900 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10">
-                {project.youtube_url ? (
-                  <div className="aspect-video w-full">
-                    <iframe 
-                      src={getEmbedUrl(project.youtube_url)!} 
-                      className="w-full h-full" 
-                      allowFullScreen 
-                    />
-                  </div>
-                ) : (
-                  <img 
-                    src={project.screenshots[0]} 
-                    className="w-full h-auto object-cover max-h-[500px]" 
-                    alt="Main Simulation Preview" 
+            <div className="space-y-6">
+              {project.youtube_url ? (
+                /* Video takes priority in Cinema Mode */
+                <div className="bg-slate-900 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10 aspect-video">
+                  <iframe 
+                    src={getEmbedUrl(project.youtube_url)!} 
+                    className="w-full h-full" 
+                    allowFullScreen 
                   />
-                )}
-              </div>
-            )}
+                </div>
+              ) : (
+                /* The Gallery handles 1 or many images with nav controls */
+                <ProjectGallery images={project.screenshots || []} />
+              )}
+            </div>
 
             {/* DESCRIPTION: TYPOGRAPHY FOCUS */}
             <section className="bg-slate-900/50 rounded-3xl p-8 md:p-12 border border-white/5">
@@ -93,7 +90,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                 Project Documentation
               </h2>
               
-              {/* prose-invert handles technical formatting (lists, bolding, code) */}
               <article className="prose prose-invert prose-blue max-w-none prose-headings:font-bold prose-p:text-slate-300 prose-strong:text-white prose-li:text-slate-300 leading-relaxed whitespace-pre-line">
                 {project.description}
               </article>
