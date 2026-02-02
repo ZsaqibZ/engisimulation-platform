@@ -1,22 +1,27 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import Navbar from './components/Navbar' // <--- Import
+import Navbar from './components/Navbar';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Initialize Inter font with technical subsets
+const inter = Inter({ 
   subsets: ["latin"],
+  display: 'swap',
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata = {
-  title: 'EngiSimulation',
-  description: 'Engineering Simulation Marketplace',
-}
+export const metadata: Metadata = {
+  title: {
+    default: "EngiSimulation | Engineering Simulation Marketplace",
+    template: "%s | EngiSimulation",
+  },
+  description: "The premier marketplace for high-fidelity engineering simulations, CAD models, and computational fluid dynamics (CFD) assets.",
+  keywords: ["Engineering", "Simulation", "CAD", "CFD", "FEA", "3D Modeling", "Marketplace"],
+  authors: [{ name: "EngiSimulation Team" }],
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 export default function RootLayout({
   children,
@@ -24,13 +29,33 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="scroll-smooth">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.className} bg-slate-950 text-slate-50 antialiased min-h-screen flex flex-col`}
       >
         <Navbar />
-        {children}
+        
+        {/* Main content area expands to push footer down */}
+        <main className="flex-grow">
+          {children}
+        </main>
+
+        {/* Placeholder Footer for future development */}
+        <Footer />
       </body>
     </html>
+  );
+}
+
+/** * Temporary Footer Component 
+ * You can move this to its own file in /components later 
+ */
+function Footer() {
+  return (
+    <footer className="border-t border-slate-800 py-8 px-4 text-center text-sm text-slate-500">
+      <div className="container mx-auto">
+        <p>© {new Date().getFullYear()} EngiSimulation. All rights reserved.</p>
+      </div>
+    </footer>
   );
 }

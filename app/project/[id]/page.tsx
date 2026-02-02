@@ -14,7 +14,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     { cookies: { getAll() { return cookieStore.getAll() } } }
   )
 
-  // 1. Fetch Project Data with Author Profile
   const { data: project } = await supabase
     .from('projects')
     .select('*, profiles(full_name, job_title, avatar_url)')
@@ -26,23 +25,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const { data: { user } } = await supabase.auth.getUser()
   const isAuthor = user && user.id === project.author_id
 
-  // 2. Fetch Like Info
-  const { count: likeCount } = await supabase
-    .from('likes')
-    .select('*', { count: 'exact', head: true })
-    .eq('project_id', id)
-
-  let userHasLiked = false
-  if (user) {
-    const { data: likeData } = await supabase
-      .from('likes')
-      .select('id')
-      .eq('project_id', id)
-      .eq('user_id', user.id)
-      .single()
-    if (likeData) userHasLiked = true
-  }
-
+  // Formatting YouTube URLs for Cinema Mode
   const getEmbedUrl = (url: string) => {
     if (!url) return null
     const v = url.split('v=')[1] || url.split('/').pop()
@@ -50,150 +33,151 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 pt-24 pb-20">
-      
-      {/* Background decoration */}
-      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-slate-900 to-slate-950 z-0"></div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+    <main className="min-h-screen bg-slate-950 pt-28 pb-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         
-        {/* --- HEADER SECTION --- */}
-        <div className="mb-8 animate-fade-in">
-          <Link href="/" className="text-slate-400 hover:text-blue-400 text-sm font-medium mb-4 inline-block transition-colors">
-            ← Back to Library
-          </Link>
+        {/* --- STYLIZED BACK BUTTON --- */}
+        <Link 
+          href="/library" 
+          className="group flex items-center gap-2 text-slate-400 hover:text-blue-400 text-sm font-semibold mb-8 transition-all w-fit"
+        >
+          <span className="transition-transform group-hover:-translate-x-1">←</span>
+          Back to Library
+        </Link>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-            <div>
-              <div className="flex flex-wrap items-center gap-3 mb-3">
-                 <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold uppercase tracking-wider text-slate-300 shadow-sm">
+          {/* --- LEFT COLUMN: CONTENT & MEDIA --- */}
+          <div className="lg:col-span-2 space-y-12">
+            
+            {/* Header Info */}
+            <header className="space-y-4">
+              <div className="flex items-center gap-3">
+                 <span className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold uppercase tracking-widest text-blue-400">
                    {project.software_type}
                  </span>
-                 <span className="text-slate-500 text-sm font-mono">
-                   v1.0 • {new Date(project.created_at).toLocaleDateString()}
+                 <span className="text-slate-500 text-xs font-mono italic">
+                   Last Updated: {new Date(project.created_at).toLocaleDateString()}
                  </span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-white leading-tight">
+              <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
                 {project.title}
               </h1>
-            </div>
-            
-            {/* ACTION BUTTONS */}
-            <div className="flex flex-wrap items-center gap-3">
-               <LikeButton projectId={project.id} initialLikes={likeCount || 0} initialHasLiked={userHasLiked} />
-               
-               {isAuthor && (
-                 <>
-                   <Link 
-                     href={`/project/${project.id}/edit`}
-                     className="px-4 py-2 bg-slate-800 border border-slate-700 text-slate-300 font-medium rounded-lg hover:bg-slate-700 transition-colors text-sm flex items-center gap-2"
-                   >
-                     <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                     Edit
-                   </Link>
-                   <DeleteProjectButton projectId={project.id} />
-                 </>
-               )}
-            </div>
-          </div>
-        </div>
+            </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* --- LEFT COLUMN --- */}
-          <div className="lg:col-span-2 space-y-8 animate-slide-up">
-            
-            {/* MEDIA */}
-            <div className="bg-black rounded-xl overflow-hidden shadow-2xl ring-1 ring-slate-800">
-              {project.youtube_url ? (
-                <div className="aspect-video w-full">
-                  <iframe src={getEmbedUrl(project.youtube_url)!} className="w-full h-full" allowFullScreen />
-                </div>
-              ) : project.screenshots && project.screenshots.length > 0 ? (
-                <img src={project.screenshots[0]} className="w-full h-auto object-cover" alt="Main Preview" />
-              ) : (
-                <div className="h-64 flex items-center justify-center text-slate-600">No Preview Available</div>
-              )}
-            </div>
-
-            {/* DESCRIPTION */}
-            <div className="bg-slate-900 rounded-xl p-8 border border-slate-800 shadow-sm">
-              <h2 className="text-xl font-bold text-white mb-4 border-b border-slate-800 pb-2">About this Project</h2>
-              <div className="prose prose-invert max-w-none text-slate-300 leading-relaxed whitespace-pre-line">
-                {project.description}
+            {/* CINEMA MODE MEDIA GALLERY */}
+            {(project.youtube_url || project.screenshots?.[0]) && (
+              <div className="bg-slate-900 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10">
+                {project.youtube_url ? (
+                  <div className="aspect-video w-full">
+                    <iframe 
+                      src={getEmbedUrl(project.youtube_url)!} 
+                      className="w-full h-full" 
+                      allowFullScreen 
+                    />
+                  </div>
+                ) : (
+                  <img 
+                    src={project.screenshots[0]} 
+                    className="w-full h-auto object-cover max-h-[500px]" 
+                    alt="Main Simulation Preview" 
+                  />
+                )}
               </div>
+            )}
+
+            {/* DESCRIPTION: TYPOGRAPHY FOCUS */}
+            <section className="bg-slate-900/50 rounded-3xl p-8 md:p-12 border border-white/5">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <span className="w-8 h-1 bg-blue-600 rounded-full inline-block"></span>
+                Project Documentation
+              </h2>
               
-              {project.tags && project.tags.length > 0 && (
-                <div className="mt-8 pt-6 border-t border-slate-800">
-                  <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Keywords</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {project.tags.map((tag: string) => (
-                      <span key={tag} className="px-3 py-1 bg-slate-800 text-slate-300 rounded-md text-sm border border-slate-700">
-                        #{tag}
-                      </span>
-                    ))}
+              {/* prose-invert handles technical formatting (lists, bolding, code) */}
+              <article className="prose prose-invert prose-blue max-w-none prose-headings:font-bold prose-p:text-slate-300 prose-strong:text-white prose-li:text-slate-300 leading-relaxed whitespace-pre-line">
+                {project.description}
+              </article>
+              
+              {project.tags?.length > 0 && (
+                <div className="mt-12 flex flex-wrap gap-2 pt-8 border-t border-white/5">
+                  {project.tags.map((tag: string) => (
+                    <span key={tag} className="px-3 py-1.5 bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg text-xs font-medium border border-white/5 transition-colors cursor-default">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* DISCUSSION */}
+            <section className="space-y-6">
+               <h3 className="text-xl font-bold text-white px-2">Community Discussion</h3>
+               <div className="bg-slate-900/50 rounded-3xl border border-white/5 p-6">
+                 <CommentSection projectId={project.id} />
+               </div>
+            </section>
+          </div>
+
+          {/* --- RIGHT COLUMN: STICKY SIDEBAR --- */}
+          <aside className="space-y-6">
+            <div className="lg:sticky lg:top-28 space-y-6">
+              
+              {/* DOWNLOAD & STATS CARD */}
+              <div className="bg-slate-900 p-8 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 blur-3xl -mr-16 -mt-16 group-hover:bg-blue-600/20 transition-all duration-500"></div>
+                
+                <h3 className="text-lg font-bold text-white mb-2">Access Project Files</h3>
+                <p className="text-sm text-slate-400 mb-6">Commercial use license included with all verified simulation assets.</p>
+
+                {user ? (
+                  <a 
+                    href={project.file_url} 
+                    className="block w-full py-4 bg-blue-600 hover:bg-blue-500 text-white text-center font-bold rounded-xl shadow-[0_10px_20px_-5px_rgba(37,99,235,0.4)] transition-all active:scale-95"
+                  >
+                    Download Source Files
+                  </a>
+                ) : (
+                  <Link 
+                    href="/login" 
+                    className="block w-full py-4 bg-white/5 hover:bg-white/10 text-white text-center font-bold rounded-xl border border-white/10 transition-all"
+                  >
+                    Log In to Access
+                  </Link>
+                )}
+
+                <div className="mt-8 space-y-4">
+                  <LikeButton projectId={project.id} initialLikes={0} initialHasLiked={false} />
+                  <div className="flex items-center justify-between text-xs font-medium py-3 border-t border-white/5">
+                    <span className="text-slate-500">License</span>
+                    <span className="text-slate-300 font-mono">Academic/SME</span>
                   </div>
+                </div>
+              </div>
+
+              {/* AUTHOR CARD */}
+              <div className="bg-slate-900/40 p-6 rounded-3xl border border-white/5">
+                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Lead Engineer</p>
+                 <div className="flex items-center gap-4 mb-4">
+                    <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-lg">
+                       {project.profiles?.full_name?.charAt(0) || 'E'}
+                    </div>
+                    <div>
+                      <div className="font-bold text-white leading-tight">{project.profiles?.full_name || 'Verified Member'}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">{project.profiles?.job_title || 'Simulation Specialist'}</div>
+                    </div>
+                 </div>
+                 <Link href={`/profile/${project.author_id}`} className="block w-full text-center py-2.5 text-xs font-bold text-blue-400 hover:text-blue-300 border border-blue-400/20 rounded-xl transition-all">
+                   View Full Portfolio
+                 </Link>
+              </div>
+
+              {isAuthor && (
+                <div className="flex gap-2">
+                  <DeleteProjectButton projectId={project.id} />
                 </div>
               )}
             </div>
-
-            {/* COMMENTS */}
-            <div className="bg-slate-900 rounded-xl p-8 border border-slate-800 shadow-sm">
-               <h2 className="text-xl font-bold text-white mb-6">Discussion</h2>
-               <CommentSection projectId={project.id} />
-            </div>
-          </div>
-
-          {/* --- RIGHT COLUMN (SIDEBAR) --- */}
-          <div className="space-y-6">
-            
-            {/* DOWNLOAD CARD */}
-            <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg lg:sticky lg:top-24">
-              <div className="mb-6">
-                 <h3 className="text-lg font-bold text-white">Get the Files</h3>
-                 <p className="text-sm text-slate-400">Includes source code and documentation.</p>
-              </div>
-
-              {user ? (
-                <a 
-                  href={project.file_url} 
-                  download 
-                  className="block w-full text-center py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1 transition-all"
-                >
-                  Download File
-                </a>
-              ) : (
-                <Link 
-                  href="/login" 
-                  className="block w-full text-center py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg transition-all border border-slate-700"
-                >
-                  Log In to Download
-                </Link>
-              )}
-
-              <div className="mt-6 space-y-3 pt-6 border-t border-slate-800 text-sm text-slate-400">
-                 <div className="flex justify-between"><span>License</span><span className="font-mono text-white">MIT Open Source</span></div>
-                 <div className="flex justify-between"><span>Verified</span><span className="text-green-400 font-bold">Yes ✅</span></div>
-              </div>
-            </div>
-
-            {/* AUTHOR CARD */}
-            <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-sm">
-               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Published By</h3>
-               <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-md border border-slate-700">
-                     {project.profiles?.full_name?.charAt(0) || 'U'}
-                  </div>
-                  <div>
-                    <div className="font-bold text-white">{project.profiles?.full_name || 'Anonymous Engineer'}</div>
-                    <div className="text-xs text-slate-400">{project.profiles?.job_title || 'Community Member'}</div>
-                  </div>
-               </div>
-               <Link href={`/profile/${project.author_id}`} className="block mt-4 text-center text-sm text-blue-400 font-medium hover:text-blue-300">
-                 View Portfolio
-               </Link>
-            </div>
-          </div>
+          </aside>
         </div>
       </div>
     </main>
