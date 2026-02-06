@@ -1,108 +1,136 @@
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 
-export default function LandingPage() {
+export const dynamic = 'force-dynamic'
+
+export default async function LandingPage() {
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { getAll() { return cookieStore.getAll() } } }
+  )
+
+  const { data: { user } } = await supabase.auth.getUser()
+
   return (
-    <main className="min-h-screen bg-slate-950 flex flex-col selection:bg-blue-500/30">
+    <main className="min-h-screen bg-slate-950 flex flex-col font-sans text-slate-50 relative overflow-hidden">
       
+      {/* --- BACKGROUND ENGINEERING GRID --- */}
+      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
+        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-slate-700"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+        </svg>
+        {/* Radial Fade to make content readable */}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-transparent to-slate-950"></div>
+      </div>
+
       {/* --- HERO SECTION --- */}
-      <section className="relative min-h-screen flex flex-col justify-center items-center overflow-hidden pt-20 px-4">
+      <section className="relative z-10 flex-1 flex flex-col justify-center items-center pt-32 pb-24 text-center px-4">
         
-        {/* Advanced CSS Background Effects */}
-        <div className="absolute inset-0 z-0">
-            {/* Dark Overlay */}
-            <div className="absolute inset-0 bg-slate-950/40 z-10"></div>
-            
-            {/* Technical Grid Pattern */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:32px:32px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
-            
-            {/* Glowing Mesh Orb */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-600/30 rounded-full blur-[120px] opacity-50 z-0 animate-pulse-subtle"></div>
-        </div>
-        
-        {/* Content Container */}
-        <div className="max-w-7xl mx-auto relative z-20 text-center">
-          {/* Animated Badge */}
-          <div className="animate-fade-in opacity-0 [animation-fill-mode:forwards]">
-            <span className="inline-block py-1.5 px-4 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-[0.2em] mb-10 backdrop-blur-md">
-              The Future of Engineering
-            </span>
-          </div>
-          
-          <h1 className="text-6xl md:text-9xl font-black tracking-tighter text-white mb-8 leading-[0.9] animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:200ms]">
-            The Standard <br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-b from-blue-400 to-blue-700">
-              for Simulation.
-            </span>
-          </h1>
-          
-          <p className="text-lg md:text-2xl text-slate-400 max-w-2xl mx-auto mb-12 leading-relaxed font-medium animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:400ms]">
-            Accelerate your workflow with a curated marketplace of verified 
-            MATLAB, Ansys, and Python-driven engineering assets.
-          </p>
-          
-          {/* Primary & Secondary CTAs */}
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-5 animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:600ms]">
-            <Link 
-              href="/library" 
-              className="group relative px-10 py-4 bg-blue-600 text-white font-black text-lg rounded-2xl transition-all hover:bg-blue-500 hover:shadow-[0_0_40px_-10px_rgba(59,130,246,0.5)] hover:-translate-y-1 active:scale-95 overflow-hidden"
-            >
-              <span className="relative z-10">Start Browsing</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-            </Link>
-            
-            <Link 
-              href="/login" 
-              className="px-10 py-4 glass text-white font-bold text-lg rounded-2xl hover:bg-white/10 transition-all active:scale-95"
-            >
-              Contributor Login
-            </Link>
-          </div>
+        {/* Glow Effect behind text */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-blue-600/10 blur-[120px] rounded-full -z-10"></div>
+
+        {/* Animated Badge */}
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/80 border border-slate-700 backdrop-blur-md mb-8 animate-fade-in">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+          </span>
+          <span className="text-xs font-semibold text-slate-300 uppercase tracking-widest">v1.0 Public Beta</span>
         </div>
 
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce opacity-20">
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-          </svg>
+        {/* Main Title */}
+        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white leading-tight mb-6 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          The Standard for <br/>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500">
+            Engineering Simulation
+          </span>
+        </h1>
+
+        {/* Subtext */}
+        <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed font-light animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          A unified repository for verifying, sharing, and discovering high-fidelity models. 
+          Optimized for MATLAB, Ansys, and Python workflows.
+        </p>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-5 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+          <Link 
+            href="/library" 
+            className="group relative px-8 py-4 bg-blue-600 text-white font-semibold text-lg rounded-lg overflow-hidden transition-all hover:bg-blue-500 hover:shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)]"
+          >
+            <span className="relative z-10 flex items-center gap-2">
+              {user ? 'Go to Dashboard' : 'Explore Library'}
+              <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+            </span>
+          </Link>
+
+          {!user && (
+            <Link 
+              href="/login" 
+              className="px-8 py-4 bg-transparent border border-slate-700 text-slate-300 font-semibold text-lg rounded-lg hover:bg-slate-800/50 hover:text-white transition-all backdrop-blur-sm"
+            >
+              Contributor Access
+            </Link>
+          )}
         </div>
       </section>
 
-      {/* --- TRUST & FEATURES GRID --- */}
-      <section className="relative z-20 py-24 border-t border-slate-900 bg-slate-950/50 backdrop-blur-xl">
+      {/* --- FEATURES SECTION --- */}
+      <section className="relative z-10 border-t border-slate-800 bg-slate-950/50 backdrop-blur-lg py-24">
          <div className="max-w-7xl mx-auto px-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-               
-               <FeatureCard 
-                 icon="🚀" 
-                 title="Fast Deployment" 
-                 desc="Instant access to source code and simulation parameters to jumpstart your next project."
-               />
-               <FeatureCard 
-                 icon="🛡️" 
-                 title="Verified Assets" 
-                 desc="Every project is reviewed for structural integrity and code accuracy by our peer network."
-               />
-               <FeatureCard 
-                 icon="🌐" 
-                 title="Open Standards" 
-                 desc="Built on a philosophy of transparency and collaborative engineering advancement."
-               />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              
+              {/* Feature 1 */}
+              <div className="group p-8 rounded-2xl bg-slate-900/40 border border-slate-800 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center mb-6 group-hover:bg-blue-500/20 transition-colors">
+                  <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">High Performance</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  Direct download links for optimized source code. No wait times, no ads, just raw engineering files ready for implementation.
+                </p>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="group p-8 rounded-2xl bg-slate-900/40 border border-slate-800 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center mb-6 group-hover:bg-blue-500/20 transition-colors">
+                  <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Verified Integrity</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  Every simulation is reviewed for syntax errors and logic flaws. We ensure the models run correctly on standard environments.
+                </p>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="group p-8 rounded-2xl bg-slate-900/40 border border-slate-800 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center mb-6 group-hover:bg-blue-500/20 transition-colors">
+                  <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Collaborative</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  Built by engineers, for engineers. Contribute your own research, get feedback, and build your professional portfolio.
+                </p>
+              </div>
 
             </div>
          </div>
       </section>
-    </main>
-  )
-}
 
-function FeatureCard({ icon, title, desc }: { icon: string, title: string, desc: string }) {
-  return (
-    <div className="group p-8 rounded-3xl border border-white/5 bg-slate-900/30 hover:bg-slate-900/50 hover:border-blue-500/30 transition-all duration-500">
-      <div className="text-4xl mb-6 group-hover:scale-110 transition-transform duration-300 inline-block">{icon}</div>
-      <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
-      <p className="text-slate-500 text-sm leading-relaxed group-hover:text-slate-400 transition-colors">
-        {desc}
-      </p>
-    </div>
+      {/* --- STATS FOOTER --- */}
+      <div className="border-t border-slate-900 py-10 text-center">
+        <p className="text-slate-600 text-sm font-mono uppercase tracking-widest">
+          Trusted by engineers from top institutions
+        </p>
+      </div>
+    </main>
   )
 }

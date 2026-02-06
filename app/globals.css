@@ -1,42 +1,74 @@
-/* FIXED CSS - Force Update */
 @import "tailwindcss";
 
+
+/* --- 1. THEME CONFIGURATION (Replaces tailwind.config.ts) --- */
+/* No valid CSS rule found for @theme, consider removing or replacing it */
+:root {
+  /* Define theme variables here if needed */
+  /* Brand Colors */
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-900: #1e3a8a;
+
+  /* MATLAB Colors */
+  --color-matlab-bg: #fff1f0;
+  --color-matlab-text: #cf1322;
+  --color-matlab-border: #ffa39e;
+
+  /* Python Colors */
+  --color-python-bg: #f0f5ff;
+  --color-python-text: #1d39c4;
+  --color-python-border: #adc6ff;
+
+  /* Ansys Colors */
+  --color-ansys-bg: #fffbe6;
+  --color-ansys-text: #d48806;
+  --color-ansys-border: #ffe58f;
+
+  /* LabVIEW Colors */
+  --color-labview-bg: #f6ffed;
+  --color-labview-text: #389e0d;
+  --color-labview-border: #b7eb8f;
+
+  /* SolidWorks Colors */
+  --color-solidworks-bg: #fff0f6;
+  --color-solidworks-text: #c41d7f;
+  --color-solidworks-border: #ffadd2;
+
+  /* Animations */
+  --animate-fade-in: fadeIn 0.5s ease-out;
+  --animate-slide-up: slideUp 0.4s ease-out;
+}
+  
+
+/* --- 2. BASE STYLES --- */
 @layer base {
   :root {
-    /* Engineering Dark Mode Palette */
-    --background: #020617;    /* Slate 950 */
-    --foreground: #f8fafc;    /* Slate 50 */
-    
-    /* Electric Blue Accent */
-    --primary: #3b82f6;       /* Blue 500 */
-    --primary-hover: #2563eb; /* Blue 600 */
-    
-    /* UI Elements */
-    --card: #0f172a;          /* Slate 900 */
-    --border: #1e293b;        /* Slate 800 */
-    --muted: #64748b;         /* Slate 500 */
+    --background: #020617; /* Slate 950 */
+    --foreground: #f8fafc; /* Slate 50 */
   }
 
   body {
     background-color: var(--background);
     color: var(--foreground);
-    /* Modern font smoothing for high-end typography */
+    /* Font Smoothing */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 }
 
-@layer components {
-  /* Glassmorphism Effect */
-  .glass {
-    background-color: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-}
-
+/* --- 3. COMPONENT UTILITIES --- */
 @layer utilities {
-  /* Custom thin dark scrollbar */
+  .glass {
+    background-color: rgba(30, 41, 59, 0.8); /* Slate 950 with 80% opacity */
+    backdrop-filter: blur(4px); /* Adjust blur as needed */
+    border-bottom: 1px solid #1e293b; /* Slate 800 */
+  }
+  
+  /* Custom Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
   }
@@ -44,39 +76,10 @@
     background: var(--background);
   }
   ::-webkit-scrollbar-thumb {
-    background: #334155; /* Slate 700 */
+    background: #334155;
     border-radius: 10px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #475569; /* Slate 600 */
-  }
-
-  /* Keyframe Animations */
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  @keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-
-  @keyframes pulseSubtle {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-
-  /* Utility Classes for Animations */
-  .animate-fade-in {
-    animation: fadeIn 0.6s ease-out forwards;
-  }
-
-  .animate-slide-up {
-    animation: slideUp 0.6s ease-out forwards;
-  }
-
-  .animate-pulse-subtle {
-    animation: pulseSubtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    background: #475569;
   }
 }
