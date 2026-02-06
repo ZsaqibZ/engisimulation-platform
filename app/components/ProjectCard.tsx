@@ -1,92 +1,157 @@
 'use client'
 
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { createBrowserClient } from '@supabase/ssr'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  software_type: string;
-  screenshots: string[];
-  created_at: string;
-}
+export default function ProjectCard({ project }: { project: any }) {
+  const router = useRouter()
+  const [likes, setLikes] = useState(0)
+  const [hasLiked, setHasLiked] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-export default function ProjectCard({ project }: { project: Project }) {
-  // Mapping for engineering-specific software branding
-  const badgeStyles: Record<string, string> = {
-    matlab: 'bg-red-500/10 text-red-400 border-red-500/20',
-    simulink: 'bg-red-500/10 text-red-400 border-red-500/20',
-    python: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-    ansys: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-    labview: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    solidworks: 'bg-slate-400/10 text-slate-300 border-slate-400/20',
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchLikeStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      // 1. Get total likes
+      const { count } = await supabase
+        .from('likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('project_id', project.id)
+
+      // 2. Check if *current user* liked it
+      let userLiked = false
+      if (user) {
+        const { data } = await supabase
+          .from('likes')
+          .select('id')
+          .eq('project_id', project.id)
+          .eq('user_id', user.id)
+          .single()
+        if (data) userLiked = true
+      }
+
+      if (isMounted) {
+        setLikes(count || 0)
+        setHasLiked(userLiked)
+        setLoading(false)
+      }
+    }
+
+    fetchLikeStatus()
+    return () => { isMounted = false }
+  }, [project.id])
+
+  const handleToggleLike = async (e: React.MouseEvent) => {
+    e.preventDefault() // Prevent clicking the card link
+    e.stopPropagation()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    // Redirect if not logged in
+    if (!user) {
+      return router.push('/login')
+    }
+
+    // Optimistic Update (Make it feel instant)
+    const originalLikes = likes
+    const originalHasLiked = hasLiked
+    
+    setHasLiked(!hasLiked)
+    setLikes(hasLiked ? likes - 1 : likes + 1)
+
+    try {
+      if (originalHasLiked) {
+        // UNLIKE: Delete the row
+        const { error } = await supabase
+          .from('likes')
+          .delete()
+          .eq('project_id', project.id)
+          .eq('user_id', user.id)
+        
+        if (error) throw error
+      } else {
+        // LIKE: Insert a row
+        const { error } = await supabase
+          .from('likes')
+          .insert({ project_id: project.id, user_id: user.id })
+        
+        if (error) throw error
+      }
+    } catch (err: any) {
+      // Revert changes if it fails
+      console.error('Like Error:', err.message)
+      setHasLiked(originalHasLiked)
+      setLikes(originalLikes)
+      alert(`Error: ${err.message}`)
+    }
   }
 
-  const softwareKey = project.software_type.toLowerCase();
-  const currentBadgeStyle = badgeStyles[softwareKey] || 'bg-slate-700/20 text-slate-300 border-slate-600/30';
-
   return (
-    <motion.div
-      whileHover={{ y: -6 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-      className="h-full"
-    >
-      <Link href={`/project/${project.id}`} className="group block h-full">
-        <div className="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden h-full flex flex-col transition-all duration-300 group-hover:border-blue-500/50 group-hover:shadow-[0_0_30px_-10px_rgba(59,130,246,0.3)]">
-          
-          {/* Thumbnail Section with Skeleton Placeholder */}
-          <div className="relative h-52 w-full bg-slate-800 overflow-hidden">
-            {project.screenshots?.[0] ? (
-              <img 
-                src={project.screenshots[0]} 
-                alt={project.title} 
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out" 
-                loading="lazy"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-slate-800 animate-pulse">
-                 <svg className="w-12 h-12 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                 </svg>
-              </div>
-            )}
-            
-            {/* Glossy Badge Overlay */}
-            <div className="absolute top-4 left-4">
-               <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border backdrop-blur-md ${currentBadgeStyle}`}>
-                 {project.software_type}
-               </span>
+    <div className="group bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:-translate-y-1 hover:border-blue-500/50 hover:shadow-2xl transition-all duration-300 flex flex-col h-full">
+      <Link href={`/project/${project.id}`} className="block flex-1">
+        
+        {/* Thumbnail Section */}
+        <div className="h-48 bg-slate-950 relative overflow-hidden">
+          {project.screenshots && project.screenshots[0] ? (
+            <img 
+              src={project.screenshots[0]} 
+              alt={project.title} 
+              className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" 
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-4xl text-slate-800 bg-slate-950/50">
+              ⚡
             </div>
+          )}
+          <div className="absolute top-2 right-2 bg-slate-950/80 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold text-white border border-slate-800">
+            {project.software_type}
           </div>
+        </div>
 
-          {/* Content Section */}
-          <div className="p-6 flex flex-col flex-1">
-            <h3 className="font-bold text-xl text-white mb-2 line-clamp-1 group-hover:text-blue-400 transition-colors">
-              {project.title}
-            </h3>
-            <p className="text-slate-400 text-sm leading-relaxed mb-6 line-clamp-2 flex-1">
-              {project.description}
-            </p>
-            
-            <div className="flex items-center justify-between pt-5 border-t border-slate-800/50 mt-auto">
-               <div className="flex flex-col">
-                 <span className="text-[10px] uppercase text-slate-500 font-bold tracking-widest">Released</span>
-                 <span className="text-xs text-slate-300 font-mono">
-                   {new Date(project.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}
-                 </span>
-               </div>
-               
-               <div className="flex items-center gap-2 text-blue-400 text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                 Explore 
-                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                 </svg>
-               </div>
+        {/* Content Section */}
+        <div className="p-5 flex flex-col gap-3 flex-1">
+          <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-1">
+            {project.title}
+          </h3>
+          <p className="text-slate-400 text-sm line-clamp-2">
+            {project.description}
+          </p>
+          
+          {/* Footer: Tags & Like Button */}
+          <div className="mt-auto pt-4 flex items-center justify-between border-t border-slate-800/50">
+            <div className="flex gap-2">
+               {/* Display first tag only to keep it clean */}
+               {project.tags && project.tags[0] && (
+                 <span className="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded-full">#{project.tags[0]}</span>
+               )}
             </div>
+
+            <button 
+              onClick={handleToggleLike}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                 hasLiked 
+                   ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20' 
+                   : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+              }`}
+            >
+              <span className={hasLiked ? 'scale-110' : ''}>
+                {hasLiked ? '❤️' : '🤍'}
+              </span>
+              {likes}
+            </button>
           </div>
         </div>
       </Link>
-    </motion.div>
+    </div>
   )
 }

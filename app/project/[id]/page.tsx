@@ -1,7 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
-import LikeButton from '@/app/components/LikeButton'
 import CommentSection from '@/app/components/CommentSection'
 import DeleteProjectButton from '@/app/components/DeleteProjectButton'
 import ProjectGallery from '@/app/components/ProjectGallery' // Integrated the new gallery
@@ -141,13 +140,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                   </Link>
                 )}
 
-                <div className="mt-8 space-y-4">
-                  <LikeButton projectId={project.id} initialLikes={0} initialHasLiked={false} />
-                  <div className="flex items-center justify-between text-xs font-medium py-3 border-t border-white/5">
-                    <span className="text-slate-500">License</span>
-                    <span className="text-slate-300 font-mono">Academic/SME</span>
-                  </div>
-                </div>
+                
               </div>
 
               {/* AUTHOR CARD */}
