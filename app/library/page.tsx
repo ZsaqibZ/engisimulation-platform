@@ -11,9 +11,31 @@ export default async function LibraryPage() {
   const session = await getServerSession(authOptions)
   const user = session?.user
 
-  // 2. Fetch Projects
-  await dbConnect()
-  const projects = await Project.find({}).sort({ createdAt: -1 }).lean()
+  // 2. Fetch Projects (with error handling to avoid server crash)
+  let projects: any[] = []
+  let dbError = false
+  try {
+    await dbConnect()
+    projects = await Project.find({}).sort({ createdAt: -1 }).lean()
+    // Convert _id to string for safe serialisation
+    projects = projects.map((p) => ({ ...p, _id: p._id.toString() }))
+  } catch (err) {
+    console.error('Library page DB error:', err)
+    dbError = true
+  }
+
+  if (dbError) {
+    return (
+      <main className="min-h-screen bg-slate-950 pt-24 pb-20 px-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-4xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-white mb-2">Could not load library</h2>
+          <p className="text-slate-400">There was a problem connecting to the database. Please try again later.</p>
+        </div>
+      </main>
+    )
+  }
+
 
   return (
     <main className="min-h-screen bg-slate-950 pt-24 pb-20 px-4 md:px-8">
