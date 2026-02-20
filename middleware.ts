@@ -1,14 +1,6 @@
-import { type NextRequest } from 'next/server'
-import { updateSession } from '@/utils/supabase/middleware'
-
-export async function middleware(request: NextRequest) {
-  // We only refresh the session cookies here.
-  // We DO NOT redirect.
-  return await updateSession(request)
-}
+export { default } from "next-auth/middleware";
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
-}
+  // Protect these routes (redirect to login if not authenticated)
+  matcher: ["/settings", "/saved", "/project/:path*/edit", "/profile/:path*"],
+};

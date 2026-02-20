@@ -1,61 +1,71 @@
 'use client'
 
-import { createBrowserClient } from '@supabase/ssr'
+// import { createBrowserClient } from '@supabase/ssr'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function BookmarkButton({ projectId }: { projectId: number }) {
   const router = useRouter()
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function checkStatus() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return setLoading(false)
-
-      const { data } = await supabase
-        .from('bookmarks')
-        .select('*')
-        .eq('project_id', projectId)
-        .eq('user_id', user.id)
-        .single()
-
-      if (data) setSaved(true)
+      // Check if logged in via session (can't easily do it here without passing session or making a call)
+      // We'll just call the API which checks auth
+      try {
+        const res = await fetch(`/api/bookmarks?project_id=${projectId}`)
+        const data = await res.json()
+        if (data.success && data.saved) {
+          setSaved(true)
+        }
+      } catch (e) {
+        console.error(e)
+      }
       setLoading(false)
     }
     checkStatus()
-  }, [projectId, supabase])
+  }, [projectId])
 
   const toggleSave = async () => {
     if (loading) return
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return router.push('/login')
 
-    const newSavedState = !saved
-    setSaved(newSavedState) // Optimistic UI
+    // Optimistic UI
+    const previousSaved = saved
+    setSaved(!saved)
 
-    if (newSavedState) {
-      await supabase.from('bookmarks').insert({ project_id: projectId, user_id: user.id })
-    } else {
-      await supabase.from('bookmarks').delete().eq('project_id', projectId).eq('user_id', user.id)
+    try {
+      if (!saved) { // If it WAS NOT saved, we are saving it
+        const res = await fetch('/api/bookmarks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project_id: projectId })
+        })
+        if (res.status === 401) return router.push('/login')
+        if (!res.ok) throw new Error('Failed to save')
+      } else { // If it WAS saved, we are unsaving it
+        const res = await fetch('/api/bookmarks', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project_id: projectId })
+        })
+        if (res.status === 401) return router.push('/login')
+        if (!res.ok) throw new Error('Failed to remove')
+      }
+      router.refresh()
+    } catch (error) {
+      console.error(error)
+      setSaved(previousSaved) // Revert on error
     }
-    router.refresh()
   }
 
   return (
-    <button 
+    <button
       onClick={toggleSave}
-      className={`p-2 rounded-full border transition-all ${
-        saved 
-          ? 'bg-blue-50 border-blue-200 text-blue-600' 
-          : 'bg-white border-gray-300 text-gray-400 hover:text-gray-600'
-      }`}
+      className={`p-2 rounded-full border transition-all ${saved
+        ? 'bg-blue-50 border-blue-200 text-blue-600'
+        : 'bg-white border-gray-300 text-gray-400 hover:text-gray-600'
+        }`}
       title={saved ? "Remove from Saved" : "Save for Later"}
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={saved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -1,19 +1,16 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import Link from 'next/link'
 import ProjectCard from '../components/ProjectCard'
+import dbConnect from '@/lib/mongodb'
+import Like from '@/models/Like'
+import Project from '@/models/Project'
 
 export const dynamic = 'force-dynamic'
 
 export default async function SavedPage() {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll() } } }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
+  const session = await getServerSession(authOptions)
+  const user = session?.user
 
   if (!user) {
     return (
@@ -27,21 +24,30 @@ export default async function SavedPage() {
     )
   }
 
-  // Fetch the projects that the user has 'liked'
-  // We join the 'likes' table with the 'projects' table
-  const { data: savedItems } = await supabase
-    .from('likes')
-    .select('project_id, projects(*)')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+  await dbConnect()
 
-  // Extract the actual project objects from the nested response
-  const projects = savedItems?.map((item) => item.projects).filter(Boolean) || []
+  // 1. Find all likes by this user
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const likes = await Like.find({ user_id: (user as any).id }).lean()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const projectIds = likes.map((like: any) => like.project_id)
+
+  // 2. Fetch projects
+  const rawProjects = await Project.find({ _id: { $in: projectIds } }).lean()
+
+  // 3. Serialize
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const projects = rawProjects.map((p: any) => ({
+    ...p,
+    _id: p._id.toString(),
+    createdAt: p.createdAt ? p.createdAt.toISOString() : null,
+    author_id: p.author_id.toString(),
+  }))
 
   return (
     <main className="min-h-screen bg-slate-950 pt-24 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Header */}
         <div className="mb-8 animate-fade-in border-b border-slate-800 pb-6">
           <h1 className="text-3xl font-bold text-white tracking-tight">Saved Projects</h1>
@@ -53,6 +59,7 @@ export default async function SavedPage() {
         {/* Grid */}
         {projects.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up">
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {projects.map((project: any) => (
               <ProjectCard key={project.id} project={project} />
             ))}
@@ -66,8 +73,8 @@ export default async function SavedPage() {
             <p className="text-slate-400 text-sm mt-1 mb-6 max-w-sm mx-auto">
               Browse the library and click the heart icon to save projects for later.
             </p>
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               className="inline-block px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500 transition-colors shadow-lg hover:shadow-blue-500/20"
             >
               Browse Library

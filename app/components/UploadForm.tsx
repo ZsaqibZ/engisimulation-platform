@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import JSZip from 'jszip'
 
@@ -14,15 +13,11 @@ const SOFTWARE_LIST = [
   "Revit", "SAP2000", "ETABS", "STAAD.Pro", "Civil 3D", "Tekla Structures",
   "Aspen Plus", "Aspen HYSYS", "DWSIM", "ChemCAD",
   "ROS (Robot Operating System)", "Gazebo", "Webots", "CoppeliaSim",
-  "Other / Custom" 
+  "Other / Custom"
 ].sort()
 
 export default function UploadForm({ user }: { user: any }) {
   const router = useRouter()
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   // --- STATE ---
   const [step, setStep] = useState(1)
@@ -32,8 +27,8 @@ export default function UploadForm({ user }: { user: any }) {
   // Form Data
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [software, setSoftware] = useState(SOFTWARE_LIST[0]) 
-  const [customSoftware, setCustomSoftware] = useState('') 
+  const [software, setSoftware] = useState(SOFTWARE_LIST[0])
+  const [customSoftware, setCustomSoftware] = useState('')
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
@@ -46,7 +41,7 @@ export default function UploadForm({ user }: { user: any }) {
       const timeout = setTimeout(() => reject('Processing timeout'), 10000)
       const img = new Image()
       const objectUrl = URL.createObjectURL(imageFile)
-      
+
       img.src = objectUrl
       img.onload = () => {
         clearTimeout(timeout)
@@ -89,34 +84,42 @@ export default function UploadForm({ user }: { user: any }) {
   async function handleUpload() {
     if (!file) return alert('Please select a project file!')
     if (!user) return router.push('/login')
-    
+
     const finalSoftware = software === "Other / Custom" ? customSoftware.trim() : software
     if (!finalSoftware) return alert("Please specify the software used.")
 
     try {
       // 1. Process Screenshots
-      let screenshotUrls: string[] = []
+      const screenshotUrls: string[] = []
       if (screenshots && screenshots.length > 0) {
         setStatus('Optimizing images...')
         for (let i = 0; i < screenshots.length; i++) {
           const original = screenshots[i]
           let fileToUpload = original
           try {
-             fileToUpload = await convertToAvif(original)
+            fileToUpload = await convertToAvif(original)
           } catch (err) {
-             console.warn("Using original image:", err)
+            console.warn("Using original image:", err)
           }
-          const sName = `${Date.now()}_${i}_screenshot.avif`
-          await supabase.storage.from('project-images').upload(sName, fileToUpload)
-          const { data: { publicUrl } } = supabase.storage.from('project-images').getPublicUrl(sName)
-          screenshotUrls.push(publicUrl)
+
+          const formData = new FormData()
+          formData.append('file', fileToUpload)
+
+          const res = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          })
+          const data = await res.json()
+          if (!data.success) throw new Error(data.error)
+
+          screenshotUrls.push(data.url)
         }
       }
 
       // 2. Process Main File (ZIP if not already zipped)
       let finalFile = file
       const isZip = file.name.endsWith('.zip') || file.name.endsWith('.rar') || file.type.includes('zip')
-      
+
       if (!isZip) {
         setStatus('Generating archive...')
         const zip = new JSZip()
@@ -127,30 +130,47 @@ export default function UploadForm({ user }: { user: any }) {
 
       // 3. Upload File to Storage
       setStatus('Uploading assets...')
-      const fileName = `${Date.now()}_${finalFile.name}`
-      const { error: upErr } = await supabase.storage.from('project-files').upload(fileName, finalFile)
-      if (upErr) throw upErr
-      const { data: { publicUrl: fileUrl } } = supabase.storage.from('project-files').getPublicUrl(fileName)
+      const fileFormData = new FormData()
+      fileFormData.append('file', finalFile)
+
+      const fileRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: fileFormData
+      })
+      const fileData = await fileRes.json()
+      if (!fileData.success) throw new Error(fileData.error)
+      const fileUrl = fileData.url
+      if (!fileUrl) throw new Error("Upload successful but no URL returned")
 
       // 4. Save to Database
       setStatus('Finalizing registry...')
-      const { error: dbError } = await supabase.from('projects').insert([{
-        title, 
-        description, 
+
+      const payload = {
+        title,
+        description,
         software_type: finalSoftware,
         file_url: fileUrl,
-        author_id: user.id, 
-        youtube_url: youtubeUrl, 
-        screenshots: screenshotUrls, 
+        youtube_url: youtubeUrl,
+        screenshots: screenshotUrls,
         tags
-      }])
+      }
 
-      if (dbError) throw dbError
-      
+      const projectRes = await fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+
+      const projectData = await projectRes.json()
+      if (!projectData.success) throw new Error(projectData.error || 'Failed to save project')
+
       setStatus('Complete!')
       router.push('/library?success=true')
       router.refresh()
-      
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error(err)
       alert(`Upload Error: ${err.message}`)
@@ -178,8 +198,8 @@ export default function UploadForm({ user }: { user: any }) {
           <span className={step >= 3 ? 'text-blue-400' : ''}>03 Assets</span>
         </div>
         <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-blue-600 transition-all duration-700 ease-in-out" 
+          <div
+            className="h-full bg-blue-600 transition-all duration-700 ease-in-out"
             style={{ width: step === 1 ? '33.3%' : step === 2 ? '66.6%' : '100%' }}
           ></div>
         </div>
@@ -191,45 +211,45 @@ export default function UploadForm({ user }: { user: any }) {
             <h2 className="text-2xl font-bold text-white tracking-tight">Project Essentials</h2>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Title</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition-all"
-                placeholder="e.g. Flight Controller Simulation" 
-                value={title} 
-                onChange={e => setTitle(e.target.value)} 
+                placeholder="e.g. Flight Controller Simulation"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Software</label>
-              <select 
+              <select
                 className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition-all appearance-none"
-                value={software} 
+                value={software}
                 onChange={e => setSoftware(e.target.value)}
               >
                 {SOFTWARE_LIST.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               {software === "Other / Custom" && (
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   className="w-full mt-3 p-4 bg-blue-900/10 border border-blue-500/20 rounded-xl text-blue-100 outline-none animate-fade-in"
-                  placeholder="Enter software name..." 
-                  value={customSoftware} 
-                  onChange={e => setCustomSoftware(e.target.value)} 
+                  placeholder="Enter software name..."
+                  value={customSoftware}
+                  onChange={e => setCustomSoftware(e.target.value)}
                 />
               )}
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Description</label>
-              <textarea 
-                className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl text-white h-40 outline-none focus:border-blue-500 transition-all" 
-                placeholder="Provide details on methodology and usage..." 
-                value={description} 
-                onChange={e => setDescription(e.target.value)} 
+              <textarea
+                className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl text-white h-40 outline-none focus:border-blue-500 transition-all"
+                placeholder="Provide details on methodology and usage..."
+                value={description}
+                onChange={e => setDescription(e.target.value)}
               />
             </div>
             <div className="flex justify-end pt-4">
-              <button 
-                onClick={() => setStep(2)} 
+              <button
+                onClick={() => setStep(2)}
                 disabled={!title || !description}
                 className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-500 disabled:opacity-50 transition-all"
               >
@@ -243,23 +263,23 @@ export default function UploadForm({ user }: { user: any }) {
           <div className="space-y-6 animate-fade-in">
             <h2 className="text-2xl font-bold text-white tracking-tight">Visual Proof</h2>
             <div>
-               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">YouTube URL</label>
-               <input 
-                 type="url" 
-                 className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition-all" 
-                 placeholder="https://..." 
-                 value={youtubeUrl} 
-                 onChange={e => setYoutubeUrl(e.target.value)} 
-               />
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">YouTube URL</label>
+              <input
+                type="url"
+                className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition-all"
+                placeholder="https://..."
+                value={youtubeUrl}
+                onChange={e => setYoutubeUrl(e.target.value)}
+              />
             </div>
             <div className="border-2 border-dashed border-slate-800 rounded-2xl p-12 text-center hover:border-blue-500/50 transition-colors">
-               <input type="file" multiple accept="image/*" id="sc" className="hidden" onChange={e => setScreenshots(e.target.files)} />
-               <label htmlFor="sc" className="cursor-pointer">
-                 <div className="text-3xl mb-4">🖼️</div>
-                 <span className="text-blue-400 font-bold">
-                   {screenshots && screenshots.length > 0 ? `${screenshots.length} selected` : "Upload Screenshots"}
-                 </span>
-               </label>
+              <input type="file" multiple accept="image/*" id="sc" className="hidden" onChange={e => setScreenshots(e.target.files)} />
+              <label htmlFor="sc" className="cursor-pointer">
+                <div className="text-3xl mb-4">🖼️</div>
+                <span className="text-blue-400 font-bold">
+                  {screenshots && screenshots.length > 0 ? `${screenshots.length} selected` : "Upload Screenshots"}
+                </span>
+              </label>
             </div>
             <div className="flex justify-between pt-4">
               <button onClick={() => setStep(1)} className="text-slate-500 font-bold">Back</button>
@@ -271,43 +291,43 @@ export default function UploadForm({ user }: { user: any }) {
         {step === 3 && (
           <div className="space-y-6 animate-fade-in">
             <h2 className="text-2xl font-bold text-white tracking-tight">Project Assets</h2>
-            <div 
+            <div
               onDragOver={handleDrag} onDragLeave={handleDrag} onDrop={handleDrop}
               className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all ${dragActive ? 'border-blue-500 bg-blue-500/5' : 'border-slate-800 bg-slate-950'}`}
             >
               <input type="file" id="zip" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
               <label htmlFor="zip" className="cursor-pointer">
                 {file ? (
-                   <div className="text-white">
-                     <div className="text-3xl mb-2">📦</div>
-                     <p className="font-bold">{file.name}</p>
-                   </div>
+                  <div className="text-white">
+                    <div className="text-3xl mb-2">📦</div>
+                    <p className="font-bold">{file.name}</p>
+                  </div>
                 ) : (
-                   <div>
-                     <div className="text-3xl mb-2 opacity-50">📂</div>
-                     <p className="text-slate-400 font-bold">Drop main file or Click to select</p>
-                   </div>
+                  <div>
+                    <div className="text-3xl mb-2 opacity-50">📂</div>
+                    <p className="text-slate-400 font-bold">Drop main file or Click to select</p>
+                  </div>
                 )}
               </label>
             </div>
             <div className="flex flex-wrap gap-2 p-3 bg-slate-950 border border-slate-800 rounded-xl">
-                {tags.map(tag => (
-                  <span key={tag} className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-2">
-                    #{tag} 
-                    <button onClick={() => setTags(tags.filter(t => t !== tag))}>×</button>
-                  </span>
-                ))}
-                <input 
-                  className="bg-transparent text-white outline-none text-sm p-1" 
-                  placeholder="Add tags..." 
-                  value={tagInput} 
-                  onChange={e => setTagInput(e.target.value)} 
-                  onKeyDown={handleAddTag} 
-                />
+              {tags.map(tag => (
+                <span key={tag} className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-2">
+                  #{tag}
+                  <button onClick={() => setTags(tags.filter(t => t !== tag))}>×</button>
+                </span>
+              ))}
+              <input
+                className="bg-transparent text-white outline-none text-sm p-1"
+                placeholder="Add tags..."
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={handleAddTag}
+              />
             </div>
             <div className="flex justify-between pt-4">
               <button onClick={() => setStep(2)} className="text-slate-500 font-bold">Back</button>
-              <button 
+              <button
                 onClick={handleUpload}
                 disabled={!!status || !file}
                 className="px-10 py-4 bg-green-600 hover:bg-green-500 text-white font-black rounded-xl disabled:opacity-50 transition-all flex items-center gap-3"

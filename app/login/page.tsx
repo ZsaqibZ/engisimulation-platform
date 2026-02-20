@@ -1,36 +1,30 @@
 'use client'
 
-import { createBrowserClient } from '@supabase/ssr'
+import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useState } from 'react'
 
 export default function LoginPage() {
   const router = useRouter()
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   // --- STATE ---
   const [view, setView] = useState<'sign-in' | 'sign-up'>('sign-in')
   const [signupStep, setSignupStep] = useState<1 | 2>(1) // Step 1: Email, Step 2: Details
-  
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  
+
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
   // --- HANDLERS ---
 
   const handleGoogleLogin = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${location.origin}/auth/callback?next=/library` },
-    })
+    // NextAuth Google Sign In
+    await signIn('google', { callbackUrl: '/library' })
   }
 
   const handleContinueSignup = (e: React.FormEvent) => {
@@ -50,29 +44,40 @@ export default function LoginPage() {
 
     try {
       if (view === 'sign-up') {
-        // --- SIGN UP LOGIC (With Name) ---
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${location.origin}/auth/callback`,
-            data: {
-              // This metadata is automatically copied to the 'profiles' table
-              // if you have the trigger set up (standard Supabase pattern)
-              full_name: `${firstName} ${lastName}`.trim(),
-            },
-          },
+        // --- SIGN UP LOGIC (Call API) ---
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, firstName, lastName })
         })
-        if (error) throw error
-        setMessage('✅ Success! Please check your email to confirm your account.')
-        // Don't redirect yet, let them read the message
+        const data = await res.json()
+
+        if (!data.success) throw new Error(data.error)
+
+        setMessage('✅ Account created! Signing you in...')
+
+        // Auto sign in
+        const result = await signIn('credentials', {
+          redirect: false,
+          email,
+          password
+        })
+
+        if (result?.error) throw new Error(result.error)
+
+        router.push('/library')
+        router.refresh()
+
       } else {
-        // --- SIGN IN LOGIC ---
-        const { error } = await supabase.auth.signInWithPassword({
+        // --- SIGN IN LOGIC (NextAuth Credentials) ---
+        const result = await signIn('credentials', {
+          redirect: false,
           email,
-          password,
+          password
         })
-        if (error) throw error
+
+        if (result?.error) throw new Error("Invalid email or password")
+
         router.push('/library')
         router.refresh()
       }
@@ -84,16 +89,29 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4 relative overflow-hidden">
-      
-      {/* Background Decoration */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-600/20 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[10%] right-[10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[100px]"></div>
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-50 relative overflow-hidden font-sans">
+
+      {/* --- BACKGROUND ENGINEERING GRID --- */}
+      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
+        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-slate-700" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+        </svg>
+        {/* Radial Fade to make content readable */}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/50 to-slate-950"></div>
       </div>
 
-      <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-8 relative z-10 animate-fade-in">
-        
+      {/* Background Decoration */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[100px]"></div>
+      </div>
+
+      <div className="max-w-md w-full bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl shadow-2xl p-8 relative z-10 animate-fade-in hover:border-blue-500/30 transition-colors duration-500">
+
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block mb-4 hover:opacity-80 transition-opacity">
@@ -103,15 +121,15 @@ export default function LoginPage() {
             {view === 'sign-in' ? 'Welcome Back' : 'Create Account'}
           </h1>
           <p className="text-slate-400 text-sm">
-            {view === 'sign-in' 
-              ? 'Enter your credentials to access the library.' 
+            {view === 'sign-in'
+              ? 'Enter your credentials to access the library.'
               : 'Join the engineering community today.'}
           </p>
         </div>
 
         {/* Message Banner */}
         {message && (
-          <div className={`mb-6 p-3 rounded-lg text-sm font-medium border ${message.includes('Success') ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
+          <div className={`mb-6 p-3 rounded-lg text-sm font-medium border ${message.includes('Account created') ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
             {message}
           </div>
         )}
@@ -136,7 +154,7 @@ export default function LoginPage() {
 
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
-              <input 
+              <input
                 type="email" required
                 className="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-600 outline-none"
                 placeholder="engineer@example.com"
@@ -145,7 +163,7 @@ export default function LoginPage() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
-              <input 
+              <input
                 type="password" required
                 className="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-600 outline-none"
                 placeholder="••••••••"
@@ -161,7 +179,7 @@ export default function LoginPage() {
         {/* --- VIEW: SIGN UP (Multi-Step) --- */}
         {view === 'sign-up' && (
           <form onSubmit={signupStep === 1 ? handleContinueSignup : handleFinalSubmit} className="space-y-4">
-            
+
             {/* STEP 1: Email & Google */}
             {signupStep === 1 && (
               <div className="animate-slide-up">
@@ -182,7 +200,7 @@ export default function LoginPage() {
 
                 <div className="mt-4">
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label>
-                  <input 
+                  <input
                     type="email" required
                     className="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-600 outline-none"
                     placeholder="engineer@example.com"
@@ -190,7 +208,7 @@ export default function LoginPage() {
                     autoFocus
                   />
                 </div>
-                
+
                 <button type="submit" className="w-full mt-4 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg transition-all">
                   Continue →
                 </button>
@@ -201,8 +219,8 @@ export default function LoginPage() {
             {signupStep === 2 && (
               <div className="animate-slide-up space-y-4">
                 <div className="p-3 bg-slate-800/50 border border-slate-700 rounded-lg flex justify-between items-center">
-                   <span className="text-sm text-slate-300">{email}</span>
-                   <button type="button" onClick={() => setSignupStep(1)} className="text-xs text-blue-400 hover:underline">Edit</button>
+                  <span className="text-sm text-slate-300">{email}</span>
+                  <button type="button" onClick={() => setSignupStep(1)} className="text-xs text-blue-400 hover:underline">Edit</button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -233,7 +251,7 @@ export default function LoginPage() {
         <div className="mt-6 text-center pt-6 border-t border-slate-800">
           <p className="text-sm text-slate-500">
             {view === 'sign-in' ? "New here?" : "Already have an account?"}
-            <button 
+            <button
               onClick={() => {
                 setView(view === 'sign-in' ? 'sign-up' : 'sign-in')
                 setSignupStep(1) // Reset step

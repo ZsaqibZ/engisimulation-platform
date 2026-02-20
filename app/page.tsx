@@ -1,18 +1,13 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth" // We import the config we just created
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
 export default async function LandingPage() {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll() } } }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
+  // 1. Get User Session (The MongoDB Way)
+  const session = await getServerSession(authOptions)
+  const user = session?.user
 
   return (
     <main className="min-h-screen bg-slate-950 flex flex-col font-sans text-slate-50 relative overflow-hidden">
@@ -74,7 +69,7 @@ export default async function LandingPage() {
 
           {!user && (
             <Link 
-              href="/login" 
+              href="/api/auth/signin" 
               className="px-8 py-4 bg-transparent border border-slate-700 text-slate-300 font-semibold text-lg rounded-lg hover:bg-slate-800/50 hover:text-white transition-all backdrop-blur-sm"
             >
               Contributor Access
