@@ -52,7 +52,7 @@ export default async function LandingPage() {
         {/* Subtext */}
         <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed font-light animate-slide-up" style={{ animationDelay: '0.2s' }}>
           A unified repository for verifying, sharing, and discovering high-fidelity models. 
-          Optimized for MATLAB, Ansys, and Python workflows.
+          Optimized for MATLAB/Simulink ,LabVIEW ,Python and more.
         </p>
 
         {/* Action Buttons */}
