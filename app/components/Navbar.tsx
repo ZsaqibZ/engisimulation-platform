@@ -90,7 +90,7 @@ export default function Navbar() {
                           <p className="text-sm font-bold text-white truncate">{user.name || user.email}</p>
                         </div>
 
-                        <DropdownItem href="/library?view=my_projects">My Projects</DropdownItem>
+                        <DropdownItem href="/my-projects">My Projects</DropdownItem>
                         <DropdownItem href="/settings">Settings</DropdownItem>
                         <hr className="my-2 border-slate-800" />
                         <button
@@ -142,7 +142,7 @@ export default function Navbar() {
               <Link href="/library" className="text-slate-300 px-3 py-2 rounded-lg hover:bg-slate-900">Library</Link>
               {user ? (
                 <>
-                  <Link href="/library?view=my_projects" className="text-slate-300 px-3 py-2 rounded-lg hover:bg-slate-900">My Projects</Link>
+                  <Link href="/my-projects" className="text-slate-300 px-3 py-2 rounded-lg hover:bg-slate-900">My Projects</Link>
                   <Link href="/settings" className="text-slate-300 px-3 py-2 rounded-lg hover:bg-slate-900">Settings</Link>
                   <Link href="/upload" className="bg-blue-600 text-white p-3 rounded-lg text-center font-bold">Upload Project</Link>
                   <button onClick={() => signOut()} className="text-red-400 text-left px-3 py-2 rounded-lg hover:bg-slate-900">Sign Out</button>

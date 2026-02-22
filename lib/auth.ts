@@ -2,6 +2,7 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+import EmailProvider from "next-auth/providers/email"; // <-- Added import
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import clientPromise from "@/lib/mongodb-adapter";
 import dbConnect from '@/lib/mongodb';
@@ -15,6 +16,20 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
+    
+    // <-- Added Email Provider for Magic Links -->
+    EmailProvider({
+      server: {
+        host: "smtp.resend.com",
+        port: 465,
+        auth: {
+          user: "resend",
+          pass: process.env.RESEND_API_KEY,
+        },
+      },
+      from: process.env.EMAIL_FROM,
+    }),
+
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -46,7 +61,8 @@ export const authOptions: NextAuthOptions = {
   ],
   pages: {
     signIn: '/login',
-    newUser: '/login?view=sign-up' // Optional: Direct new users to sign up
+    newUser: '/login?view=sign-up', 
+    verifyRequest: '/auth/verify-request', // <-- Added to redirect users after they ask for a magic link
   },
   session: {
     strategy: "jwt",
