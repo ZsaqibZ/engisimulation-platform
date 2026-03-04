@@ -5,7 +5,8 @@ import bcrypt from 'bcryptjs';
 import { Resend } from 'resend';
 import crypto from 'crypto';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize with a dummy key during build time if the real one isn't available yet
+const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_build_time');
 
 export async function POST(request: Request) {
   try {
