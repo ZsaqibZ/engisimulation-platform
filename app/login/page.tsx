@@ -1,16 +1,17 @@
 'use client'
 
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   // --- STATE ---
   const [view, setView] = useState<'sign-in' | 'sign-up'>('sign-in')
-  const [signupStep, setSignupStep] = useState<1 | 2>(1) // Step 1: Email, Step 2: Details
+  const [signupStep, setSignupStep] = useState<1 | 2>(1)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -19,6 +20,17 @@ export default function LoginPage() {
 
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+
+  // Show success banner if redirected back after verification
+  // and handle ?view=sign-up
+  useEffect(() => {
+    if (searchParams?.get('verified') === 'true') {
+      setMessage('✅ Email verified! You can now sign in.')
+    }
+    if (searchParams?.get('view') === 'sign-up') {
+      setView('sign-up')
+    }
+  }, [searchParams])
 
   // --- HANDLERS ---
 
@@ -44,7 +56,7 @@ export default function LoginPage() {
 
     try {
       if (view === 'sign-up') {
-        // --- SIGN UP LOGIC (Call API) ---
+        // --- SIGN UP LOGIC ---
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -54,19 +66,8 @@ export default function LoginPage() {
 
         if (!data.success) throw new Error(data.error)
 
-        setMessage('✅ Account created! Signing you in...')
-
-        // Auto sign in
-        const result = await signIn('credentials', {
-          redirect: false,
-          email,
-          password
-        })
-
-        if (result?.error) throw new Error(result.error)
-
-        router.push('/library')
-        router.refresh()
+        // Do NOT auto sign-in — redirect to check-email page
+        router.push('/verify-email')
 
       } else {
         // --- SIGN IN LOGIC (NextAuth Credentials) ---
@@ -76,13 +77,22 @@ export default function LoginPage() {
           password
         })
 
-        if (result?.error) throw new Error("Invalid email or password")
+        if (result?.error) {
+          if (result.error === 'EMAIL_NOT_VERIFIED') {
+            throw new Error('EMAIL_NOT_VERIFIED')
+          }
+          throw new Error('Invalid email or password')
+        }
 
         router.push('/library')
         router.refresh()
       }
     } catch (error: any) {
-      setMessage(`❌ ${error.message}`)
+      if (error.message === 'EMAIL_NOT_VERIFIED') {
+        setMessage('EMAIL_NOT_VERIFIED')
+      } else {
+        setMessage(`❌ ${error.message}`)
+      }
     } finally {
       setLoading(false)
     }
@@ -128,11 +138,30 @@ export default function LoginPage() {
         </div>
 
         {/* Message Banner */}
-        {message && (
-          <div className={`mb-6 p-3 rounded-lg text-sm font-medium border ${message.includes('Account created') ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
+        {message === 'EMAIL_NOT_VERIFIED' ? (
+          <div className="mb-6 p-4 rounded-lg text-sm border bg-amber-500/10 border-amber-500/20 text-amber-300">
+            <p className="font-bold mb-1">📬 Email not verified</p>
+            <p className="text-xs text-amber-400/80 mb-3">Please check your inbox and click the verification link before signing in.</p>
+            <button
+              onClick={async () => {
+                await fetch('/api/auth/register', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email, password: '_resend_', firstName: '', lastName: '' })
+                })
+                setMessage('✅ Verification email resent! Check your inbox.')
+              }}
+              className="text-xs font-bold text-amber-300 underline hover:text-amber-200"
+            >
+              Resend verification email →
+            </button>
+          </div>
+        ) : message ? (
+          <div className={`mb-6 p-3 rounded-lg text-sm font-medium border ${message.startsWith('✅') ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'
+            }`}>
             {message}
           </div>
-        )}
+        ) : null}
 
         {/* --- VIEW: SIGN IN (Standard) --- */}
         {view === 'sign-in' && (
@@ -266,5 +295,13 @@ export default function LoginPage() {
 
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
   )
 }

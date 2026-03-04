@@ -5,6 +5,8 @@ const UserSchema = new Schema({
     email: { type: String, unique: true },
     password: { type: String, select: false },
     emailVerified: { type: Date },
+    verificationToken: { type: String, select: false },
+    verificationTokenExpires: { type: Date, select: false },
     image: { type: String },
     // Extended fields
     full_name: { type: String },

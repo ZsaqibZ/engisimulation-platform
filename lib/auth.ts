@@ -16,7 +16,7 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    
+
     // <-- Added Email Provider for Magic Links -->
     EmailProvider({
       server: {
@@ -40,10 +40,15 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) return null;
 
         await dbConnect();
-        const user = await User.findOne({ email: credentials.email }).select('+password');
+        const user = await User.findOne({ email: credentials.email }).select('+password +verificationToken');
 
         if (!user || !user.password) { // User might be OAuth only
           return null;
+        }
+
+        // Block sign-in if email is not verified
+        if (!user.emailVerified) {
+          throw new Error('EMAIL_NOT_VERIFIED');
         }
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
@@ -61,7 +66,7 @@ export const authOptions: NextAuthOptions = {
   ],
   pages: {
     signIn: '/login',
-    newUser: '/login?view=sign-up', 
+    newUser: '/login?view=sign-up',
     verifyRequest: '/auth/verify-request', // <-- Added to redirect users after they ask for a magic link
   },
   session: {

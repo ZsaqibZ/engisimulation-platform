@@ -106,15 +106,15 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="flex items-center gap-4">
-                <button onClick={() => signIn()} className="text-sm font-medium text-slate-300 hover:text-white transition-all">
+                <Link href="/login" className="text-sm font-medium text-slate-300 hover:text-white transition-all">
                   Log In
-                </button>
-                <button
-                  onClick={() => signIn()}
-                  className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/20 transition-all active:scale-95"
+                </Link>
+                <Link
+                  href="/login?view=sign-up"
+                  className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/20 transition-all active:scale-95 text-center"
                 >
                   Sign Up
-                </button>
+                </Link>
               </div>
             )}
           </div>
@@ -148,7 +148,7 @@ export default function Navbar() {
                   <button onClick={() => signOut()} className="text-red-400 text-left px-3 py-2 rounded-lg hover:bg-slate-900">Sign Out</button>
                 </>
               ) : (
-                <button onClick={() => signIn()} className="bg-blue-600 text-white p-3 rounded-lg text-center font-bold">Get Started</button>
+                <Link href="/login?view=sign-up" className="bg-blue-600 text-white p-3 rounded-lg text-center font-bold">Get Started</Link>
               )}
             </div>
           </motion.div>
