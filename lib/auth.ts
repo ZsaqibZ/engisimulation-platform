@@ -20,11 +20,11 @@ export const authOptions: NextAuthOptions = {
     // <-- Added Email Provider for Magic Links -->
     EmailProvider({
       server: {
-        host: "smtp.resend.com",
+        host: "smtp.zoho.com",
         port: 465,
         auth: {
-          user: "resend",
-          pass: process.env.RESEND_API_KEY,
+          user: process.env.ZOHO_MAIL_USER,
+          pass: process.env.ZOHO_MAIL_PASSWORD,
         },
       },
       from: process.env.EMAIL_FROM,

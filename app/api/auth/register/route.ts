@@ -2,11 +2,19 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 
-// Initialize with a dummy key during build time if the real one isn't available yet
-const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_build_time');
+// Initialize nodemailer transporter for Zoho Mail
+const transporter = nodemailer.createTransport({
+  host: "smtp.zoho.com",
+  port: 465,
+  secure: true, // true for 465, false for other ports
+  auth: {
+    user: process.env.ZOHO_MAIL_USER,
+    pass: process.env.ZOHO_MAIL_PASSWORD,
+  },
+});
 
 export async function POST(request: Request) {
   try {
@@ -70,11 +78,11 @@ export async function POST(request: Request) {
 async function sendVerificationEmail(email: string, displayName: string, token: string) {
   const baseUrl = process.env.NEXTAUTH_URL || 'https://engisimulation.vercel.app';
   const verifyUrl = `${baseUrl}/api/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
-  const fromAddress = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+  const fromAddress = process.env.EMAIL_FROM || 'noreply@engisimulation.com';
 
   try {
-    await resend.emails.send({
-      from: `EngiSimulation <${fromAddress}>`,
+    const info = await transporter.sendMail({
+      from: `"EngiSimulation" <${fromAddress}>`,
       to: email,
       subject: 'Verify your EngiSimulation account',
       html: `
@@ -125,8 +133,11 @@ async function sendVerificationEmail(email: string, displayName: string, token: 
             </html>
             `
     });
-  } catch (emailError) {
+
+    console.log('Message sent: %s', info.messageId);
+
+  } catch (emailError: any) {
     console.error('Failed to send verification email:', emailError);
-    throw new Error('Failed to send verification email. Please try again.');
+    throw new Error(emailError.message || 'Failed to send verification email. Please try again.');
   }
 }
