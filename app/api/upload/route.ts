@@ -1,12 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import fs from 'fs';
-import path from 'path';
-import { pipeline } from 'stream';
-import { promisify } from 'util';
-
-const pump = promisify(pipeline);
+import dbConnect from '@/lib/mongodb';
+import mongoose from 'mongoose';
 
 export async function POST(request: Request) {
     try {
@@ -23,16 +19,29 @@ export async function POST(request: Request) {
         }
 
         const buffer = Buffer.from(await file.arrayBuffer());
-        const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-        const filePath = path.join(process.cwd(), 'public', 'uploads', fileName);
 
-        await fs.promises.writeFile(filePath, buffer);
+        await dbConnect();
+        const db = mongoose.connection.db;
+        if (!db) {
+            return NextResponse.json({ error: "Database error" }, { status: 500 });
+        }
 
-        const publicUrl = `/uploads/${fileName}`;
+        const bucket = new mongoose.mongo.GridFSBucket(db, { bucketName: 'uploads' });
+
+        const uploadStream = bucket.openUploadStream(file.name, {
+            contentType: file.type,
+        });
+
+        await new Promise((resolve, reject) => {
+            uploadStream.end(buffer).on('error', reject).on('finish', resolve);
+        });
+
+        const publicUrl = `/api/files/${uploadStream.id}`;
 
         return NextResponse.json({ success: true, url: publicUrl });
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Internal Server Error";
         console.error("Upload error:", error);
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
