@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { id: fileId } = await params;
