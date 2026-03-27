@@ -23,6 +23,11 @@ export default function EditForm({ project }: EditFormProps) {
   const [description, setDescription] = useState(project.description)
   const [youtubeUrl, setYoutubeUrl] = useState(project.youtube_url || '')
 
+  // Version Update State
+  const [newVersionFile, setNewVersionFile] = useState<File | null>(null)
+  const [versionString, setVersionString] = useState('')
+  const [changelog, setChangelog] = useState('')
+
   // Image State
   const [currentScreenshots, setCurrentScreenshots] = useState<string[]>(project.screenshots || [])
   const [newImages, setNewImages] = useState<FileList | null>(null)
@@ -53,7 +58,25 @@ export default function EditForm({ project }: EditFormProps) {
         }
       }
 
-      // 2. Update Database
+      // 2. Upload NEW Zip (if any)
+      let newFileUrl = null
+      let newVerifiedVersion = null
+      if (newVersionFile) {
+        const fileFormData = new FormData()
+        fileFormData.append('file', newVersionFile)
+        
+        const fileRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: fileFormData
+        })
+        const fileData = await fileRes.json()
+        if (!fileData.success) throw new Error(fileData.error)
+        
+        newFileUrl = fileData.url
+        newVerifiedVersion = fileData.verified_version
+      }
+
+      // 3. Update Database
       const res = await fetch(`/api/projects/${project._id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -61,7 +84,11 @@ export default function EditForm({ project }: EditFormProps) {
           title,
           description,
           youtube_url: youtubeUrl,
-          screenshots: updatedScreenshots
+          screenshots: updatedScreenshots,
+          new_file_url: newFileUrl,
+          version_string: versionString,
+          changelog,
+          verified_version: newVerifiedVersion
         })
       })
 
@@ -156,11 +183,51 @@ export default function EditForm({ project }: EditFormProps) {
               + Add New Images
             </span>
             <span className="text-sm text-gray-500">
-              {newImages && newImages.length > 0
-                ? `${newImages.length} file(s) selected`
-                : "Click to upload PNG or JPG"}
             </span>
           </label>
+        </div>
+      </div>
+
+      {/* Push Update Section */}
+      <div className="border-t border-gray-200 pt-8 mt-8">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Push New Version (Optional)</h3>
+        <p className="text-sm text-gray-500 mb-6">Upload a new ZIP file to push an update without breaking existing links.</p>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">New Project File (.zip)</label>
+            <input
+              type="file"
+              accept=".zip,.rar"
+              onChange={e => setNewVersionFile(e.target.files?.[0] || null)}
+              className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+            />
+          </div>
+          
+          {newVersionFile && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Version Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. v2.0 or 2024 Update"
+                  value={versionString}
+                  onChange={e => setVersionString(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Changelog</label>
+                <input
+                  type="text"
+                  placeholder="What's new in this update?"
+                  value={changelog}
+                  onChange={e => setChangelog(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -24,6 +24,9 @@ export async function GET(request: Request) {
         job_title: user.job_title,
         website: user.website,
         avatar_url: user.avatar_url || user.image,
+        username: user.username,
+        bio: user.bio,
+        github_url: user.github_url
     });
 }
 
@@ -34,7 +37,7 @@ export async function PATCH(request: Request) {
     }
 
     try {
-        const { full_name, job_title, website, avatar_url } = await request.json();
+        const { full_name, job_title, website, avatar_url, username, bio, github_url } = await request.json();
         const userId = (session.user as any).id;
 
         await dbConnect();
@@ -45,7 +48,10 @@ export async function PATCH(request: Request) {
             job_title,
             website,
             avatar_url,
-            image: avatar_url // Keep image synced
+            image: avatar_url, // Keep image synced
+            username,
+            bio,
+            github_url
         }, { new: true });
 
         return NextResponse.json({ success: true, user: updatedUser });

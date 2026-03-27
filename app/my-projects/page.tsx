@@ -23,8 +23,10 @@ export default async function MyProjectsPage() {
 
     try {
         await dbConnect()
-        const raw = await Project.find({ author_id: userId }).sort({ createdAt: -1 }).lean()
-        projects = raw.map((p: any) => ({ ...p, _id: p._id.toString() }))
+        if (userId) {
+            const raw = await Project.find({ author_id: userId, isDeleted: { $ne: true } }).sort({ createdAt: -1 }).lean()
+            projects = raw.map((p: any) => ({ ...p, _id: p._id.toString() }))
+        }
     } catch (err) {
         console.error('My Projects page DB error:', err)
         dbError = true

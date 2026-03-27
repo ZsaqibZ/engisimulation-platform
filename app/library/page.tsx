@@ -16,7 +16,7 @@ export default async function LibraryPage() {
 
   try {
     await dbConnect()
-    const raw = await Project.find({}).sort({ createdAt: -1 }).lean()
+    const raw = await Project.find({ isDeleted: { $ne: true } }).sort({ createdAt: -1 }).lean()
     projects = raw.map((p: any) => ({ ...p, _id: p._id.toString() }))
   } catch (err) {
     console.error('Library page DB error:', err)

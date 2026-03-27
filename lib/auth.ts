@@ -76,6 +76,18 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub!;
+        
+        try {
+          await dbConnect();
+          const dbUser = await User.findById(token.sub).select('reputation role username').lean() as any;
+          if (dbUser) {
+            (session.user as any).reputation = dbUser.reputation || 0;
+            (session.user as any).role = dbUser.role || 'user';
+            (session.user as any).username = dbUser.username;
+          }
+        } catch (e) {
+          console.error("Session callback DB error:", e);
+        }
       }
       return session;
     },

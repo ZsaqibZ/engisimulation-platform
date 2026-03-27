@@ -22,10 +22,27 @@ const CommentSchema = new Schema({
         type: String,
         required: false
     },
+    parentCommentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Comment',
+        default: null
+    },
+    isAcceptedSolution: {
+        type: Boolean,
+        default: false
+    },
     createdAt: {
         type: Date,
         default: Date.now,
     },
+    isDeleted: {
+        type: Boolean,
+        default: false,
+    },
+    deletedAt: {
+        type: Date,
+        default: null,
+    }
 });
 
 const Comment = models.Comment || model('Comment', CommentSchema);

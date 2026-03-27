@@ -14,6 +14,7 @@ export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+
   const pathname = usePathname()
 
   // Close menus on click-outside
@@ -57,9 +58,6 @@ export default function Navbar() {
               <div className="h-8 w-20 bg-slate-800 rounded animate-pulse"></div>
             ) : user ? (
               <div className="flex items-center gap-6">
-                <Link href="/upload" className="text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors">
-                  + Upload
-                </Link>
 
                 {/* User Profile Dropdown */}
                 <div className="relative" ref={dropdownRef}>
@@ -91,6 +89,7 @@ export default function Navbar() {
                         </div>
 
                         <DropdownItem href="/my-projects">My Projects</DropdownItem>
+                        <DropdownItem href="/collections">My Collections</DropdownItem>
                         <DropdownItem href="/settings">Settings</DropdownItem>
                         <hr className="my-2 border-slate-800" />
                         <button
@@ -140,9 +139,11 @@ export default function Navbar() {
           >
             <div className="flex flex-col p-4 gap-4">
               <Link href="/library" className="text-slate-300 px-3 py-2 rounded-lg hover:bg-slate-900">Library</Link>
+              <Link href="/bounties" className="text-slate-300 px-3 py-2 rounded-lg hover:bg-slate-900">Bounties <span className="text-xs bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full font-bold">New</span></Link>
               {user ? (
                 <>
                   <Link href="/my-projects" className="text-slate-300 px-3 py-2 rounded-lg hover:bg-slate-900">My Projects</Link>
+                  <Link href="/collections" className="text-slate-300 px-3 py-2 rounded-lg hover:bg-slate-900">My Collections</Link>
                   <Link href="/settings" className="text-slate-300 px-3 py-2 rounded-lg hover:bg-slate-900">Settings</Link>
                   <Link href="/upload" className="bg-blue-600 text-white p-3 rounded-lg text-center font-bold">Upload Project</Link>
                   <button onClick={() => signOut()} className="text-red-400 text-left px-3 py-2 rounded-lg hover:bg-slate-900">Sign Out</button>

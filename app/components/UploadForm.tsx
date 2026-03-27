@@ -131,6 +131,7 @@ export default function UploadForm({ user }: { user: any }) {
       const fileData = await fileRes.json()
       if (!fileData.success) throw new Error(fileData.error)
       const fileUrl = fileData.url
+      const verified_version = fileData.verified_version || null;
       if (!fileUrl) throw new Error("Upload successful but no URL returned")
 
       // 4. Save to Database
@@ -143,7 +144,8 @@ export default function UploadForm({ user }: { user: any }) {
         file_url: fileUrl,
         youtube_url: youtubeUrl,
         screenshots: screenshotUrls,
-        tags
+        tags,
+        verified_version
       }
 
       const projectRes = await fetch('/api/projects', {

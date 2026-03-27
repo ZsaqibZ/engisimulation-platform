@@ -18,10 +18,42 @@ const ProjectSchema = new Schema({
     type: [String], // Array of strings (e.g., ['Solar', 'Thermal'])
     default: [],
   },
+  verified_version: {
+    type: String,
+    default: null,
+  },
+  security_status: {
+    type: String,
+    enum: ['pending', 'safe', 'flagged'],
+    default: 'pending',
+  },
+  scan_results: {
+    type: String,
+    default: null,
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false,
+  },
+  deletedAt: {
+    type: Date,
+    default: null,
+  },
+  embedding: {
+    type: [Number],
+    index: true,
+  },
   file_url: {
     type: String, // Link to the zip file (Local Storage URL)
     required: [true, 'Please provide the file download URL.'],
   },
+  versions: [{
+    version_string: String,
+    file_url: String,
+    changelog: String,
+    uploaded_at: { type: Date, default: Date.now }
+  }],
+  current_version: String,
   screenshots: {
     type: [String], // Array of image URLs
     default: [],

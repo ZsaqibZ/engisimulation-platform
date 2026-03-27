@@ -13,6 +13,9 @@ export default function SettingsPage() {
   const [jobTitle, setJobTitle] = useState('')
   const [website, setWebsite] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [username, setUsername] = useState('')
+  const [bio, setBio] = useState('')
+  const [githubUrl, setGithubUrl] = useState('')
 
   useEffect(() => {
     const getProfile = async () => {
@@ -30,6 +33,9 @@ export default function SettingsPage() {
         setJobTitle(data.job_title || '')
         setWebsite(data.website || '')
         setAvatarUrl(data.avatar_url || '')
+        setUsername(data.username || '')
+        setBio(data.bio || '')
+        setGithubUrl(data.github_url || '')
       } catch (error) {
         console.error(error)
       } finally {
@@ -51,7 +57,10 @@ export default function SettingsPage() {
           full_name: fullName,
           job_title: jobTitle,
           website,
-          avatar_url: avatarUrl
+          avatar_url: avatarUrl,
+          username,
+          bio,
+          github_url: githubUrl
         })
       })
 
@@ -119,14 +128,49 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-400 mb-2">Website / Portfolio</label>
+              <label className="block text-sm font-bold text-slate-400 mb-2">Username (Unique)</label>
               <input
-                type="url"
+                type="text"
                 className="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-600 outline-none"
-                placeholder="https://your-portfolio.com"
-                value={website}
-                onChange={e => setWebsite(e.target.value)}
+                placeholder="engineering_guru"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-slate-400 mb-2">Short Bio</label>
+              <textarea
+                className="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-600 outline-none h-24"
+                placeholder="Tell us about your engineering background..."
+                value={bio}
+                onChange={e => setBio(e.target.value)}
+                maxLength={500}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-400 mb-2">Website / Portfolio</label>
+                <input
+                  type="url"
+                  className="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-600 outline-none"
+                  placeholder="https://your-portfolio.com"
+                  value={website}
+                  onChange={e => setWebsite(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-400 mb-2">GitHub URL</label>
+                <input
+                  type="url"
+                  className="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-600 outline-none"
+                  placeholder="https://github.com/..."
+                  value={githubUrl}
+                  onChange={e => setGithubUrl(e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="pt-6 border-t border-slate-800 flex justify-end">

@@ -14,6 +14,11 @@ const UserSchema = new Schema({
     company: { type: String },
     location: { type: String },
     linkedin_url: { type: String },
+    username: { type: String, unique: true, sparse: true },
+    bio: { type: String, maxlength: 500 },
+    website: { type: String },
+    github_url: { type: String },
+    reputation: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now },
     updated_at: { type: Date, default: Date.now },
 }, { timestamps: true });

@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import dbConnect from '@/lib/mongodb';
 import Like from '@/models/Like';
+import Project from '@/models/Project';
+import User from '@/models/User';
 
 export async function GET(request: Request) {
     try {
@@ -46,6 +48,9 @@ export async function POST(request: Request) {
         const body = await request.json();
         await dbConnect();
 
+        const project = await Project.findById(body.project_id);
+        if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+
         // Check if already liked
         const exists = await Like.findOne({
             project_id: body.project_id,
@@ -55,6 +60,7 @@ export async function POST(request: Request) {
         if (exists) {
             // Toggle off (unlike)
             await Like.deleteOne({ _id: exists._id });
+            await User.updateOne({ _id: project.author_id }, { $inc: { reputation: -5 } });
             return NextResponse.json({ success: true, action: 'unliked' });
         } else {
             // Liked
@@ -62,6 +68,7 @@ export async function POST(request: Request) {
                 user_id: (session.user as any).id,
                 project_id: body.project_id
             });
+            await User.updateOne({ _id: project.author_id }, { $inc: { reputation: 5 } });
             return NextResponse.json({ success: true, action: 'liked' });
         }
 

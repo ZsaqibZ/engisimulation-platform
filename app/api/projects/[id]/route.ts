@@ -18,7 +18,7 @@ export async function DELETE(
 
         const project = await Project.findById(id);
 
-        if (!project) {
+        if (!project || project.isDeleted) {
             return NextResponse.json({ error: "Project not found" }, { status: 404 });
         }
 
@@ -27,9 +27,10 @@ export async function DELETE(
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        await Project.deleteOne({ _id: id });
+        // Soft Delete
+        await Project.findByIdAndUpdate(id, { $set: { isDeleted: true, deletedAt: new Date() } });
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, message: "Project deleted successfully" });
     } catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
@@ -65,9 +66,20 @@ export async function PATCH(
         project.description = data.description || project.description;
         project.youtube_url = data.youtube_url || project.youtube_url;
         project.screenshots = data.screenshots || project.screenshots;
-        // software_type and tags could also be updated if needed, but EditForm mainly sends these.
-        // If EditForm sends them, we should update them.
-        // EditForm.tsx sends: title, description, youtube_url, screenshots.
+        
+        // Version history update
+        if (data.new_file_url) {
+            project.versions.push({
+                version_string: project.current_version || 'v1.0',
+                file_url: project.file_url,
+                changelog: "Archived previous version to make room for update.",
+                uploaded_at: new Date()
+            });
+
+            project.file_url = data.new_file_url;
+            project.current_version = data.version_string || `v${project.versions.length + 1}.0`;
+            if (data.verified_version) project.verified_version = data.verified_version;
+        }
 
         await project.save();
 
