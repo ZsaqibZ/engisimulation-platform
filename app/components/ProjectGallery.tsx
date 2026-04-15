@@ -3,6 +3,11 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
+const swipeConfidenceThreshold = 10000;
+const swipePower = (offset: number, velocity: number) => {
+  return Math.abs(offset) * velocity;
+};
+
 export default function ProjectGallery({ images }: { images: string[] }) {
   const [index, setIndex] = useState(0)
 
@@ -23,7 +28,18 @@ export default function ProjectGallery({ images }: { images: string[] }) {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
-          className="w-full h-full object-contain bg-slate-950"
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={1}
+          onDragEnd={(e, { offset, velocity }) => {
+            const swipe = swipePower(offset.x, velocity.x);
+            if (swipe < -swipeConfidenceThreshold) {
+              nextImage();
+            } else if (swipe > swipeConfidenceThreshold) {
+              prevImage();
+            }
+          }}
+          className="w-full h-full object-contain bg-slate-950 cursor-grab active:cursor-grabbing"
           alt={`Project screenshot ${index + 1}`}
         />
       </AnimatePresence>

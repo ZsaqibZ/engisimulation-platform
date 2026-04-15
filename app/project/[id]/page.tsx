@@ -210,7 +210,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                 <>
                   <a
                     href={project.file_url}
-                    download
+                    download={`${project.title.replace(/\s+/g, '_')}.zip`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block w-full py-4 bg-blue-600 hover:bg-blue-500 text-white text-center font-bold rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all transform hover:-translate-y-1"
@@ -274,7 +274,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                   {project.author_id.substring(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-sm text-slate-400">Contributor</p>
                   <Link href={authorUsername ? `/engineer/${authorUsername}` : `#`} className="text-white font-bold hover:text-blue-400 transition-colors block">
                     {authorUsername ? `@${authorUsername}` : 'Unknown'}
                   </Link>

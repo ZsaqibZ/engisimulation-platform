@@ -119,8 +119,8 @@ export default function UploadForm({ user }: { user: any }) {
         finalFile = new File([blob], `${title.replace(/\s+/g, '_')}.zip`, { type: "application/zip" })
       }
 
-      // 3. Upload File to Storage
-      setStatus('Uploading assets...')
+      // 3. Upload File to Storage & Scan
+      setStatus('Uploading & Security Scanning (VirusTotal)...')
       const fileFormData = new FormData()
       fileFormData.append('file', finalFile)
 

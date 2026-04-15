@@ -52,6 +52,7 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
             <NavLink href="/library">Library</NavLink>
+            <NavLink href="/bounties">Bounties</NavLink>
 
             {status === "loading" ? (
               // Loading Skeleton
